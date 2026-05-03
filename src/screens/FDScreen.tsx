@@ -1,0 +1,196 @@
+/**
+ * ReturnX - FD Calculator Screen
+ * Fixed Deposit — Indian banks ke liye
+ */
+
+import React, { useState, useRef } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { router } from 'expo-router';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { InputCard } from '../components/InputCard';
+import { ResultCard } from '../components/ResultCard';
+import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
+import { BarChart } from '../components/BarChart';
+import { DonutChart } from '../components/DonutChart';
+import { ErrorMessage, RateQuickSelect, validateInputs, Toast } from '../components/ErrorMessage';
+import { calcFD, calcFDYearWise, POPULAR_FD_RATES } from '../logic/fd';
+import { useAppStore } from '../store/appStore';
+import { parseInput, formatINR } from '../utils/format';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
+
+export default function FDScreen() {
+  const [amount, setAmount] = useState('100000');
+  const [rate, setRate] = useState('7.0');
+  const [months, setMonths] = useState('12');
+  const [result, setResult] = useState<ReturnType<typeof calcFD> | null>(null);
+  const [yearWise, setYearWise] = useState<ReturnType<typeof calcFDYearWise>>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const { addHistory, incrementCalcCount } = useAppStore();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const amountRef = useRef(amount);
+  const rateRef = useRef(rate);
+  const monthsRef = useRef(months);
+  amountRef.current = amount;
+  rateRef.current = rate;
+  monthsRef.current = months;
+
+  const calculate = () => {
+    const P = parseInput(amountRef.current);
+    const R = parseInput(rateRef.current);
+    const M = parseInput(monthsRef.current);
+
+    const validation = validateInputs({
+      amount: { value: P, label: 'Deposit Amount', min: 1000 },
+      months: { value: M, label: 'Tenure', min: 1, max: 360 },
+    });
+
+    setErrors(validation.errors);
+    if (!validation.valid) return;
+
+    const res = calcFD(P, R, M);
+    setResult(res);
+    setYearWise(calcFDYearWise(P, R, M));
+
+    if (res.tdsApplicable) {
+      setToastMsg('⚠️ TDS applicable: Interest > ₹40,000');
+      setShowToast(true);
+    }
+  };
+
+  const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
+    ref.current = text;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => calculate(), 300);
+  };
+
+  return (
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+        {/* Header */}
+        <ScreenHeader title="🏦 FD Calculator" subtitle="Fixed Deposit — Surakshit Bachat" />
+
+        {/* Indian Tip Banner */}
+        <View style={styles.tipBanner}>
+          <Text style={styles.tipText}>
+            💡 <Text style={styles.tipBold}>Pro Tip:</Text> Senior Citizens ko 0.25-0.5% extra rate milti hai!
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          {/* Quick Rate Select */}
+          <RateQuickSelect
+            title="Quick Bank Rates"
+            rates={POPULAR_FD_RATES}
+            onSelect={(r) => { setRate(String(r)); setTimeout(() => calculate(), 100); }}
+          />
+          <InputCard
+            label="Investment Amount"
+            defaultValue={amount}
+            onChangeText={handleInput(setAmount, amountRef)} prefix="₹" placeholder="1,00,000" hint="Enter the amount for FD" />
+          <ErrorMessage message={errors.amount || null} />
+          <InputCard
+            label="Interest Rate"
+            defaultValue={rate}
+            onChangeText={handleInput(setRate, rateRef)} prefix="" suffix="% p.a." placeholder="7.0" keyboardType="decimal-pad" hint="Bank se check karein ya oopar se select karein" />
+          <InputCard
+            label="Duration (Months)"
+            defaultValue={months}
+            onChangeText={handleInput(setMonths, monthsRef)} prefix="" suffix="Months" placeholder="12" hint="1 years = 12 mahine | 5 years = 60 mahine" />
+          <ErrorMessage message={errors.months || null} />
+        </View>
+
+        <TouchableOpacity style={styles.calcBtn} onPress={onPressCalculate} activeOpacity={0.8}>
+          <Text style={styles.calcBtnText}>Maturity Dekhein 🏦</Text>
+        </TouchableOpacity>
+
+        {result && (
+          <View style={styles.section}>
+            <ResultCard
+              title="FD Pakne Par Milega"
+              mainAmount={result.maturityAmount}
+              mainLabel="Maturity Amount"
+              rows={[
+                { label: 'Your Money (Principal)', value: result.principal },
+                { label: 'Interest Earned', value: result.totalInterest, highlight: true, color: COLORS.accent },
+                ...(result.tdsApplicable ? [
+                  { label: '⚠️ TDS Katega (10%)', value: result.tdsAmount, color: COLORS.warning },
+                  { label: 'Haath Mein Aayega', value: result.principal + result.postTaxInterest, color: COLORS.accent },
+                ] : []),
+              ]}
+              disclaimer="Yeh estimate hai. Actual returns alag ho sakti hain. Financial advice nahi."
+            />
+
+            {/* Donut Chart */}
+            <DonutChart
+              title="Investment Breakdown"
+              segments={[
+                { value: result.principal, color: COLORS.primaryLight, label: 'Your Money' },
+                { value: result.totalInterest, color: COLORS.accent, label: 'Bank ka Tohfa 🎁' },
+              ]}
+              centerLabel="Total"
+              centerValue={result.maturityAmount}
+            />
+
+            {/* Bar Chart */}
+            {yearWise.length > 1 && (
+              <BarChart
+                title="Year-by-Year Growth 📈"
+                data={yearWise.map(y => ({
+                  label: `Y${y.year}`,
+                  value1: result.principal,
+                  value2: y.interest,
+                  value1Label: 'Your Money',
+                  value2Label: 'Byaj',
+                }))}
+                color1={COLORS.primaryLight}
+                color2={COLORS.accent}
+              />
+            )}
+
+            {/* TDS Warning */}
+            {result.tdsApplicable && (
+              <View style={styles.tdsWarning}>
+                <Text style={styles.tdsIcon}>⚠️</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.tdsTitle}>TDS Notice</Text>
+                  <Text style={styles.tdsText}>
+                    Aapki byaj {formatINR(result.totalInterest)} hai jo ₹40,000 se zyada hai. Bank {formatINR(result.tdsAmount)} TDS (10%) katega. Form 15G/15H bharke TDS bachaya ja sakta hai.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        <AdBannerPlaceholder size="banner" />
+
+        {/* Toast */}
+        <Toast message={toastMsg} type="info" visible={showToast} onHide={() => setShowToast(false)} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.primaryDark },
+  content: { paddingBottom: SPACING.xxxl },
+  tipBanner: { margin: SPACING.base, marginBottom: 0, backgroundColor: 'rgba(0,200,83,0.08)', borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.accent + '33' },
+  tipText: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary, lineHeight: 18 },
+  tipBold: { fontWeight: TYPOGRAPHY.fontWeight.bold, color: COLORS.accent },
+  section: { padding: SPACING.base },
+  calcBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.lg, marginHorizontal: SPACING.base, paddingVertical: SPACING.base, alignItems: 'center', shadowColor: COLORS.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6 },
+  calcBtnText: { color: COLORS.primary, fontSize: TYPOGRAPHY.fontSize.md, fontWeight: TYPOGRAPHY.fontWeight.bold, letterSpacing: 0.5 },
+  tdsWarning: { backgroundColor: 'rgba(255,214,0,0.08)', borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.warning + '55', flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  tdsIcon: { fontSize: 20 },
+  tdsTitle: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: TYPOGRAPHY.fontWeight.bold, color: COLORS.warning, marginBottom: 4 },
+  tdsText: { fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.textSecondary, lineHeight: 18 },
+});
