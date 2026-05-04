@@ -3,12 +3,14 @@ import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Touchable
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RateBanner } from '../components/RateBanner';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { DonutChart } from '../components/DonutChart';
 import { calcSCSS } from '../logic/scss';
 import { useAppStore } from '../store/appStore';
-import { parseInput } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function SCSSScreen() {
@@ -16,7 +18,7 @@ export default function SCSSScreen() {
   const [rate, setRate] = useState('8.2');
   const [result, setResult] = useState<ReturnType<typeof calcSCSS> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const principalRef = useRef(principal);
@@ -38,6 +40,27 @@ export default function SCSSScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'SCSS',
+      label: `SCSS ${formatINRShort(parseInput(principalRef.current))}`,
+      result: result.quarterlyPayout,
+      inputs: { amount: parseInput(principalRef.current), rate: parseInput(rateRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('SCSS Calculation', [
+      `Deposit Amount: ${formatINR(parseInput(principalRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: 5 Years`,
+      `*Quarterly Payout: ${formatINR(result.quarterlyPayout)}*`,
+      `*Total Interest: ${formatINR(result.totalInterestEarned)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -95,9 +118,11 @@ export default function SCSSScreen() {
               mainAmount={result.quarterlyPayout}
               mainLabel="Quarterly Payout (Every 3 Months)"
               accentColor={COLORS.chart2}
+              principalAmount={result.principal}
+              interestAmount={result.totalInterestEarned}
               rows={[
-                { label: 'Initial Deposit', value: result.principal },
-                { label: 'Total Interest (5 Yrs)', value: result.totalInterestEarned, highlight: true, color: COLORS.chart2 },
+                { label: 'Total Interest (5 Yrs)', value: result.totalInterestEarned },
+                { label: '💰 Total Return (Principal + Interest)', value: result.totalReturns, highlight: true, color: COLORS.accent },
               ]}
               disclaimer="Interest is fully taxable. TDS may be deducted if interest exceeds ₹50,000/year under Sec 80TTB."
             />
@@ -105,11 +130,13 @@ export default function SCSSScreen() {
               title="Principal vs Interest"
               segments={[
                 { value: result.principal, color: COLORS.primaryLight, label: 'Deposit' },
-                { value: result.totalInterestEarned, color: COLORS.chart2, label: 'Interest Earned' },
+                { value: result.totalInterestEarned, color: COLORS.accent, label: 'Interest Earned' },
               ]}
               centerLabel="Total Value"
               centerValue={result.totalReturns}
             />
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
           </View>
         )}
       </ScrollView>

@@ -3,13 +3,15 @@ import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Touchable
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RateBanner } from '../components/RateBanner';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { DonutChart } from '../components/DonutChart';
 import { BarChart } from '../components/BarChart';
 import { calcSSY } from '../logic/ssy';
 import { useAppStore } from '../store/appStore';
-import { parseInput } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function SSYScreen() {
@@ -17,13 +19,11 @@ export default function SSYScreen() {
   const [rate, setRate] = useState('8.2');
   const [result, setResult] = useState<ReturnType<typeof calcSSY> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const yearlyRef = useRef(yearlyDeposit);
   const rateRef = useRef(rate);
-  yearlyRef.current = yearlyDeposit;
-  rateRef.current = rate;
 
   const calculate = () => {
     const P = parseInput(yearlyRef.current);
@@ -39,6 +39,27 @@ export default function SSYScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'SSY',
+      label: `SSY ${formatINRShort(parseInput(yearlyRef.current))}/yr`,
+      result: result.maturityAmount,
+      inputs: { amount: parseInput(yearlyRef.current), rate: parseInput(rateRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('SSY Calculation', [
+      `Yearly Deposit: ${formatINR(parseInput(yearlyRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Matures At: 21 Years`,
+      `*Total Interest: ${formatINR(result.totalInterest)}*`,
+      `*Maturity Value: ${formatINR(result.maturityAmount)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -96,8 +117,9 @@ export default function SSYScreen() {
               mainAmount={result.maturityAmount}
               mainLabel="Value at 21 Years"
               accentColor={'#E91E63'}
+              principalAmount={result.totalDeposited}
+              interestAmount={result.totalInterest}
               rows={[
-                { label: 'Total Deposited (15 Yrs)', value: result.totalDeposited },
                 { label: 'Total Interest Earned', value: result.totalInterest, highlight: true, color: '#E91E63' },
               ]}
               disclaimer="Completely Tax Free (EEE Status) under Section 80C."
@@ -111,6 +133,7 @@ export default function SSYScreen() {
               centerLabel="Maturity Value"
               centerValue={result.maturityAmount}
             />
+            <ResultActions onSave={handleSave} onShare={handleShare} />
             <BarChart
               title="Year-by-Year Growth 📊"
               data={result.yearlyData.map(y => ({

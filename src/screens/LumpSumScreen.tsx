@@ -17,7 +17,8 @@ import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcLumpSum } from '../logic/sip';
 import { calcCompoundYearWise } from '../logic/interest';
 import { useAppStore } from '../store/appStore';
-import { parseInput, isValidInput, formatINR } from '../utils/format';
+import { parseInput, isValidInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function LumpSumScreen() {
@@ -25,15 +26,12 @@ export default function LumpSumScreen() {
   const [rate, setRate] = useState('12');
   const [years, setYears] = useState('10');
   const [result, setResult] = useState<ReturnType<typeof calcLumpSum> | null>(null);
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const amountRef = useRef(amount);
   const rateRef = useRef(rate);
   const yearsRef = useRef(years);
-  amountRef.current = amount;
-  rateRef.current = rate;
-  yearsRef.current = years;
 
   const calculate = () => {
     const P = parseInput(amountRef.current);
@@ -45,6 +43,28 @@ export default function LumpSumScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'LumpSum',
+      label: `Lumpsum ${formatINRShort(parseInput(amountRef.current))} for ${yearsRef.current}Y`,
+      result: result.futureValue,
+      inputs: { amount: parseInput(amountRef.current), rate: parseInput(rateRef.current), years: parseInput(yearsRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('Lump Sum Calculation', [
+      `Investment Amount: ${formatINR(parseInput(amountRef.current))}`,
+      `Expected Rate: ${rateRef.current}%`,
+      `Duration: ${yearsRef.current} Years`,
+      `*Total Invested: ${formatINR(result.totalInvested)}*`,
+      `*Expected Returns: ${formatINR(result.totalReturns)}*`,
+      `*Final Value: ${formatINR(result.futureValue)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -85,13 +105,15 @@ export default function LumpSumScreen() {
               title="Lump Sum Growth Summary"
               mainAmount={result.futureValue}
               mainLabel="Future Value"
-              accentColor={COLORS.accent}
+              principalAmount={result.totalInvested}
+              interestAmount={result.totalReturns}
               rows={[
-                { label: 'Amount Invested', value: result.totalInvested },
                 { label: 'Total Returns', value: result.totalReturns, highlight: true, color: COLORS.accent },
                 { label: 'Wealth Multiplier', value: result.wealthRatio, isPercent: false, suffix: 'x', color: COLORS.accentLight },
               ]}
               disclaimer="Results are estimates. Not financial advice."
+              onSave={handleSave}
+              onShare={handleShare}
             />
           </View>
         )}

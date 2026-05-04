@@ -8,7 +8,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 import { useAppStore } from '../store/appStore';
 
-type RiskLevel = 'Conservative' | 'Moderate Risk' | 'Aggressive / High Risk';
+type RiskLevel = 'Low Risk' | 'Medium Risk' | 'High Risk Warning';
 
 interface RiskBadgeProps {
   rate: number;
@@ -24,7 +24,7 @@ function getRiskLevel(rate: number, conservativeThreshold: number, moderateThres
 } {
   if (rate <= conservativeThreshold) {
     return {
-      level: 'Conservative',
+      level: 'Low Risk',
       emoji: '🟢',
       color: COLORS.conservative,
       bgColor: 'rgba(0, 200, 83, 0.12)',
@@ -32,7 +32,7 @@ function getRiskLevel(rate: number, conservativeThreshold: number, moderateThres
     };
   } else if (rate <= moderateThreshold) {
     return {
-      level: 'Moderate Risk',
+      level: 'Medium Risk',
       emoji: '🟡',
       color: COLORS.moderate,
       bgColor: 'rgba(255, 214, 0, 0.12)',
@@ -40,11 +40,11 @@ function getRiskLevel(rate: number, conservativeThreshold: number, moderateThres
     };
   } else {
     return {
-      level: 'Aggressive / High Risk',
-      emoji: '🔴',
-      color: COLORS.aggressive,
-      bgColor: 'rgba(213, 0, 0, 0.12)',
-      description: 'High potential returns but significant volatility.',
+      level: 'High Risk Warning',
+      emoji: '⚠️',
+      color: '#FFFFFF',
+      bgColor: COLORS.risk,
+      description: 'High risk! Ensure this aligns with your risk tolerance.',
     };
   }
 }
@@ -59,7 +59,7 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ rate, showDescription = fa
 
   return (
     <View>
-      <View style={[styles.badge, { backgroundColor: risk.bgColor, borderColor: risk.color }]}>
+      <View style={[styles.badge, { backgroundColor: risk.bgColor, borderColor: risk.level === 'High Risk Warning' ? risk.bgColor : risk.color }]}>
         <Text style={styles.emoji}>{risk.emoji}</Text>
         <Text style={[styles.label, { color: risk.color }]}>{risk.level}</Text>
         <Text style={[styles.rate, { color: risk.color }]}>{rate}%</Text>

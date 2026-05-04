@@ -8,12 +8,14 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RiskBadge } from '../components/RiskBadge';
 import { FrequencySelector, Frequency, FREQUENCY_MAP } from '../components/FrequencySelector';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcCompoundInterest } from '../logic/interest';
 import { useAppStore } from '../store/appStore';
-import { parseInput, isValidInput, formatPercent } from '../utils/format';
+import { parseInput, isValidInput, formatPercent, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function CompoundInterestScreen() {
@@ -22,6 +24,7 @@ export default function CompoundInterestScreen() {
   const [years, setYears] = useState('10');
   const [frequency, setFrequency] = useState<Frequency>('Monthly');
   const [result, setResult] = useState<ReturnType<typeof calcCompoundInterest> | null>(null);
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -30,10 +33,7 @@ export default function CompoundInterestScreen() {
   const rateRef = useRef(rate);
   const yearsRef = useRef(years);
   const frequencyRef = useRef(frequency);
-  principalRef.current = principal;
-  rateRef.current = rate;
-  yearsRef.current = years;
-  frequencyRef.current = frequency;
+
 
 
   const calculate = () => {
@@ -47,6 +47,32 @@ export default function CompoundInterestScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'CompoundInterest',
+      label: `CI ${formatINRShort(parseInput(principalRef.current))} @ ${rateRef.current}%`,
+      result: result.totalAmount,
+      inputs: { 
+        principal: parseInput(principalRef.current), 
+        rate: parseInput(rateRef.current), 
+        years: parseInput(yearsRef.current) 
+      },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('Compound Interest', [
+      `Principal: ${formatINR(parseInput(principalRef.current))}`,
+      `Rate: ${rateRef.current}%`,
+      `Duration: ${yearsRef.current} Years`,
+      `Compounding: ${frequency}`,
+      `*Compound Interest: ${formatINR(result.interest)}*`,
+      `*Total Amount: ${formatINR(result.totalAmount)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -88,8 +114,9 @@ export default function CompoundInterestScreen() {
               title="Compound Interest Result"
               mainAmount={result.totalAmount}
               mainLabel="Maturity Amount"
+              principalAmount={result.principal}
+              interestAmount={result.interest}
               rows={[
-                { label: 'Principal (P)', value: result.principal },
                 { label: 'Compound Interest', value: result.interest, highlight: true, color: COLORS.accent },
                 { label: 'Nominal Rate', value: result.rate, isPercent: true },
                 { label: 'Effective Annual Rate', value: result.effectiveRate, isPercent: true, color: COLORS.accentLight },
@@ -97,6 +124,7 @@ export default function CompoundInterestScreen() {
               ]}
               disclaimer="Results are estimates. Not financial advice."
             />
+            <ResultActions onSave={handleSave} onShare={handleShare} />
           </View>
         )}
         <AdBannerPlaceholder size="banner" />

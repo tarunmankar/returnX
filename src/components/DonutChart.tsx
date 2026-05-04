@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 import { formatINRShort, formatPercent } from '../utils/format';
 
@@ -45,39 +45,45 @@ export const DonutChart: React.FC<DonutChartProps> = ({
     <View style={styles.container}>
       {title && <Text style={styles.title}>{title}</Text>}
       <View style={styles.chartRow}>
-        <Svg width={size} height={size}>
-          <G rotation="-90" origin={`${center}, ${center}`}>
-            {segments.map((segment, index) => {
-              const percent = segment.value / total;
-              const dashArray = `${percent * circumference} ${(1 - percent) * circumference}`;
-              const dashOffset = -cumulativePercent * circumference;
-              cumulativePercent += percent;
+        <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+          <Svg width={size} height={size}>
+            <G rotation="-90" origin={`${center}, ${center}`}>
+              {segments.map((segment, index) => {
+                const percent = segment.value / total;
+                const gap = segments.length > 1 ? 0.005 : 0;
+                const adjustedPercent = Math.max(0, percent - gap);
+                
+                const dashArray = `${adjustedPercent * circumference} ${(1 - adjustedPercent) * circumference}`;
+                const dashOffset = -cumulativePercent * circumference;
+                cumulativePercent += percent;
 
-              return (
-                <Circle
-                  key={index}
-                  cx={center}
-                  cy={center}
-                  r={radius}
-                  fill="none"
-                  stroke={segment.color}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={dashArray}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="butt"
-                />
-              );
-            })}
-          </G>
-        </Svg>
+                return (
+                  <G key={index}>
+                    <Circle
+                      cx={center}
+                      cy={center}
+                      r={radius}
+                      fill="none"
+                      stroke={segment.color}
+                      strokeWidth={strokeWidth}
+                      strokeDasharray={dashArray}
+                      strokeDashoffset={dashOffset}
+                      strokeLinecap="butt"
+                    />
+                  </G>
+                );
+              })}
+            </G>
+          </Svg>
 
-        {/* Center label */}
-        {centerValue !== undefined && (
-          <View style={[styles.centerLabel, { top: size / 2 - 20, left: size / 2 - 40 }]}>
-            <Text style={styles.centerLabelText}>{centerLabel}</Text>
-            <Text style={styles.centerValue}>{formatINRShort(centerValue)}</Text>
-          </View>
-        )}
+          {/* Center label */}
+          {centerValue !== undefined && (
+            <View style={styles.centerLabel}>
+              <Text style={styles.centerLabelText}>{centerLabel}</Text>
+              <Text style={styles.centerValue}>{formatINRShort(centerValue)}</Text>
+            </View>
+          )}
+        </View>
 
         {/* Legend */}
         <View style={styles.legend}>
@@ -115,30 +121,38 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
     marginBottom: SPACING.md,
+    textAlign: 'center',
   },
   chartRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: SPACING.base,
+    justifyContent: 'center',
+    gap: SPACING.lg,
     position: 'relative',
   },
   centerLabel: {
     position: 'absolute',
-    width: 80,
+    width: 100,
     alignItems: 'center',
+    zIndex: 10,
   },
   centerLabelText: {
     fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
   },
   centerValue: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: TYPOGRAPHY.fontWeight.bold,
+    fontSize: TYPOGRAPHY.fontSize.md,
+    fontWeight: TYPOGRAPHY.fontWeight.extrabold,
     color: COLORS.textPrimary,
   },
   legend: {
-    flex: 1,
-    gap: SPACING.sm,
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: SPACING.lg,
+    marginTop: SPACING.sm,
   },
   legendItem: {
     flexDirection: 'row',
@@ -160,8 +174,8 @@ const styles = StyleSheet.create({
   },
   legendPercent: {
     fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textMuted,
-    fontWeight: TYPOGRAPHY.fontWeight.regular,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
   },
 });
 

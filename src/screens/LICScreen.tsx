@@ -6,11 +6,13 @@ import {
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { DonutChart } from '../components/DonutChart';
 import { calcLIC } from '../logic/lic';
 import { useAppStore } from '../store/appStore';
-import { parseInput, formatINR } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 type PlanKey = 'utsav' | 'umang';
@@ -28,15 +30,12 @@ export default function LICScreen() {
   const [result, setResult] = useState<ReturnType<typeof calcLIC> | null>(null);
   const [showTable, setShowTable] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const saRef = useRef(sumAssured);
   const premRef = useRef(annualPremium);
   const termRef = useRef(premiumTerm);
-  saRef.current = sumAssured;
-  premRef.current = annualPremium;
-  termRef.current = premiumTerm;
 
   const calculate = () => {
     const SA = parseInput(saRef.current);
@@ -56,6 +55,32 @@ export default function LICScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'LIC',
+      label: `LIC ${PLANS[plan].label} - ${formatINRShort(parseInput(saRef.current))} SA`,
+      result: result.yearlySurvivalBenefit,
+      inputs: { 
+        sumAssured: parseInput(saRef.current), 
+        premium: parseInput(premRef.current), 
+        term: parseInput(termRef.current), 
+        plan: plan === 'umang' ? 1 : 2 
+      },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp(`LIC ${PLANS[plan].label}`, [
+      `Sum Assured: ${formatINR(parseInput(saRef.current))}`,
+      `Annual Premium: ${formatINR(parseInput(premRef.current))}`,
+      `Paying Term: ${termRef.current} Years`,
+      `*Yearly Survival Benefit: ${formatINR(result.yearlySurvivalBenefit)}*`,
+      `*Total Benefit (20yrs): ${formatINR(result.yearlySurvivalBenefit * 20)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -150,10 +175,12 @@ export default function LICScreen() {
               mainAmount={result.yearlySurvivalBenefit}
               mainLabel="Yearly Survival Benefit (For Life!)"
               accentColor="#E91E63"
+              principalAmount={result.totalPremiumPaid}
+              interestAmount={result.yearlySurvivalBenefit * 20 - result.totalPremiumPaid}
               rows={[
-                { label: 'Monthly Income', value: result.monthlySurvivalBenefit, highlight: true, color: COLORS.accent },
-                { label: 'Total Premium Paid', value: result.totalPremiumPaid },
+                { label: 'Monthly Income', value: result.monthlySurvivalBenefit },
                 { label: 'Death Benefit (to Nominee)', value: result.sumAssured, color: COLORS.warning },
+                { label: '💰 Projected 20yr Total Income', value: result.yearlySurvivalBenefit * 20, highlight: true, color: '#E91E63' },
                 ...(result.breakEvenYear > 0 ? [
                   { label: `Break-Even (Year ${result.breakEvenYear})`, value: result.yearlySurvivalBenefit * (result.breakEvenYear - result.premiumPayingTerm), color: COLORS.chart2 },
                 ] : []),
@@ -181,9 +208,11 @@ export default function LICScreen() {
                 { value: result.totalPremiumPaid, color: COLORS.primaryLight, label: 'Premium Paid' },
                 { value: result.yearlySurvivalBenefit * 20, color: '#E91E63', label: '20yr Benefits' },
               ]}
-              centerLabel="20yr Return"
+              centerLabel="Benefit"
               centerValue={result.yearlySurvivalBenefit * 20}
             />
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
 
             {/* Year-by-year table toggle */}
             <TouchableOpacity style={styles.tableToggle} onPress={() => setShowTable(!showTable)}>

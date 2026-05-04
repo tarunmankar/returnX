@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.fontSize.xs,
     color: COLORS.textSecondary,
     marginTop: 1,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
   },
   brand: {
     fontSize: TYPOGRAPHY.fontSize.xs,

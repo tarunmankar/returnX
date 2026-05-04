@@ -12,13 +12,15 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { BarChart } from '../components/BarChart';
 import { DonutChart } from '../components/DonutChart';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { calcPPF, calcPPFYearWise, PPF_CURRENT_RATE, PPF_MAX_ANNUAL, PPF_MIN_TENURE } from '../logic/ppf';
 import { useAppStore } from '../store/appStore';
-import { parseInput, formatINR } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 import { RateBanner } from '../components/RateBanner';
 
@@ -30,15 +32,13 @@ export default function PPFScreen() {
   const [yearWise, setYearWise] = useState<ReturnType<typeof calcPPFYearWise>>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showTable, setShowTable] = useState(false);
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const annualRef = useRef(annual);
   const rateRef = useRef(rate);
   const yearsRef = useRef(years);
-  annualRef.current = annual;
-  rateRef.current = rate;
-  yearsRef.current = years;
+
 
   const calculate = () => {
     const P = parseInput(annualRef.current);
@@ -59,6 +59,27 @@ export default function PPFScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'PPF',
+      label: `PPF ${formatINRShort(parseInput(annualRef.current))}/yr for ${yearsRef.current}Y`,
+      result: result.maturityAmount,
+      inputs: { amount: parseInput(annualRef.current), rate: parseInput(rateRef.current), years: parseInput(yearsRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('PPF Calculation', [
+      `Annual Deposit: ${formatINR(parseInput(annualRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: ${yearsRef.current} Years`,
+      `*Total Interest: ${formatINR(result.totalInterest)}*`,
+      `*Maturity Value: ${formatINR(result.maturityAmount)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -137,8 +158,9 @@ export default function PPFScreen() {
               mainAmount={result.maturityAmount}
               mainLabel="Tax-Free Maturity Amount"
               accentColor={COLORS.accent}
+              principalAmount={result.totalInvested}
+              interestAmount={result.totalInterest}
               rows={[
-                { label: 'Total Invested', value: result.totalInvested },
                 { label: 'Interest Earned (Tax-Free!) 🎉', value: result.totalInterest, highlight: true, color: COLORS.accent },
                 { label: '80C Tax Saved*', value: result.taxSaved, color: COLORS.warning },
               ]}
@@ -164,6 +186,8 @@ export default function PPFScreen() {
               centerLabel="Maturity"
               centerValue={result.maturityAmount}
             />
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
 
             {/* Yearly table toggle */}
             <TouchableOpacity style={styles.tableToggle} onPress={() => setShowTable(!showTable)}>

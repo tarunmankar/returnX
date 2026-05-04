@@ -42,7 +42,6 @@ export const InputCard: React.FC<InputCardProps> = ({
       <View style={styles.inputRow}>
         {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
         <TextInput
-          key={inputKey}
           style={styles.input}
           defaultValue={defaultValue}
           onChangeText={onChangeText}
@@ -66,13 +65,13 @@ export const InputCard: React.FC<InputCardProps> = ({
 
 const styles = StyleSheet.create({
   container: { backgroundColor: COLORS.surfaceCard, borderRadius: RADIUS.md, padding: SPACING.base, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
-  containerFocused: { borderColor: COLORS.accent, shadowColor: COLORS.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  label: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary, fontWeight: TYPOGRAPHY.fontWeight.medium, marginBottom: SPACING.xs, textTransform: 'uppercase', letterSpacing: 0.8 },
+  containerFocused: { borderColor: COLORS.accent },
+  label: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary, fontWeight: TYPOGRAPHY.fontWeight.bold, marginBottom: SPACING.xs, textTransform: 'uppercase', letterSpacing: 0.8 },
   inputRow: { flexDirection: 'row', alignItems: 'center' },
   prefix: { fontSize: TYPOGRAPHY.fontSize.xl, color: COLORS.accent, fontWeight: TYPOGRAPHY.fontWeight.bold, marginRight: SPACING.xs },
   input: { flex: 1, fontSize: TYPOGRAPHY.fontSize.xxl, color: COLORS.textPrimary, fontWeight: TYPOGRAPHY.fontWeight.bold, padding: 0, margin: 0 },
-  suffix: { fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textSecondary, fontWeight: TYPOGRAPHY.fontWeight.medium, marginLeft: SPACING.xs },
-  hint: { fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.textMuted, marginTop: SPACING.xs },
+  suffix: { fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textSecondary, fontWeight: TYPOGRAPHY.fontWeight.semibold, marginLeft: SPACING.xs },
+  hint: { fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.textSecondary, marginTop: SPACING.xs, fontWeight: TYPOGRAPHY.fontWeight.semibold },
   underline: { height: 1, backgroundColor: COLORS.border, marginTop: SPACING.sm, borderRadius: RADIUS.full },
   underlineFocused: { backgroundColor: COLORS.accent, height: 2 },
 });

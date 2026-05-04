@@ -12,13 +12,15 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { BarChart } from '../components/BarChart';
 import { DonutChart } from '../components/DonutChart';
 import { ErrorMessage, RateQuickSelect, validateInputs, Toast } from '../components/ErrorMessage';
 import { calcRD, calcRDYearWise, POPULAR_RD_RATES } from '../logic/rd';
 import { useAppStore } from '../store/appStore';
-import { parseInput, formatINR } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function RDScreen() {
@@ -28,6 +30,7 @@ export default function RDScreen() {
   const [result, setResult] = useState<ReturnType<typeof calcRD> | null>(null);
   const [yearWise, setYearWise] = useState<ReturnType<typeof calcRDYearWise>>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -35,9 +38,7 @@ export default function RDScreen() {
   const monthlyRef = useRef(monthly);
   const rateRef = useRef(rate);
   const monthsRef = useRef(months);
-  monthlyRef.current = monthly;
-  rateRef.current = rate;
-  monthsRef.current = months;
+
 
 
   const calculate = () => {
@@ -59,6 +60,27 @@ export default function RDScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'RD',
+      label: `RD ${formatINRShort(parseInput(monthlyRef.current))}/mo for ${monthsRef.current}M`,
+      result: result.maturityAmount,
+      inputs: { amount: parseInput(monthlyRef.current), rate: parseInput(rateRef.current), months: parseInput(monthsRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('RD Calculation', [
+      `Monthly Deposit: ${formatINR(parseInput(monthlyRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: ${monthsRef.current} Months`,
+      `*Interest Earned: ${formatINR(result.totalInterest)}*`,
+      `*Maturity Amount: ${formatINR(result.maturityAmount)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -111,8 +133,9 @@ export default function RDScreen() {
               title="RD Pakne Par Milega"
               mainAmount={result.maturityAmount}
               mainLabel="Maturity Raqam"
+              principalAmount={result.totalDeposited}
+              interestAmount={result.totalInterest}
               rows={[
-                { label: 'Total Amount Invested', value: result.totalDeposited },
                 { label: 'Bank Ka Tohfa (Byaj) 🎁', value: result.totalInterest, highlight: true, color: COLORS.accent },
                 { label: 'Har Months Ka Kharcha', value: result.monthlyAmount },
               ]}
@@ -128,6 +151,8 @@ export default function RDScreen() {
               centerLabel="Kul"
               centerValue={result.maturityAmount}
             />
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
 
             {yearWise.length > 1 && (
               <BarChart

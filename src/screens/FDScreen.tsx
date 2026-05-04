@@ -12,13 +12,15 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { BarChart } from '../components/BarChart';
 import { DonutChart } from '../components/DonutChart';
 import { ErrorMessage, RateQuickSelect, validateInputs, Toast } from '../components/ErrorMessage';
 import { calcFD, calcFDYearWise, POPULAR_FD_RATES } from '../logic/fd';
 import { useAppStore } from '../store/appStore';
-import { parseInput, formatINR } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function FDScreen() {
@@ -30,15 +32,12 @@ export default function FDScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const amountRef = useRef(amount);
   const rateRef = useRef(rate);
   const monthsRef = useRef(months);
-  amountRef.current = amount;
-  rateRef.current = rate;
-  monthsRef.current = months;
 
   const calculate = () => {
     const P = parseInput(amountRef.current);
@@ -64,6 +63,27 @@ export default function FDScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'FD',
+      label: `FD ${formatINRShort(parseInput(amountRef.current))} for ${monthsRef.current}M`,
+      result: result.maturityAmount,
+      inputs: { amount: parseInput(amountRef.current), rate: parseInput(rateRef.current), months: parseInput(monthsRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('FD Calculation', [
+      `Deposit Amount: ${formatINR(parseInput(amountRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: ${monthsRef.current} Months`,
+      `*Interest Earned: ${formatINR(result.totalInterest)}*`,
+      `*Maturity Amount: ${formatINR(result.maturityAmount)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -118,8 +138,9 @@ export default function FDScreen() {
               title="FD Pakne Par Milega"
               mainAmount={result.maturityAmount}
               mainLabel="Maturity Amount"
+              principalAmount={result.principal}
+              interestAmount={result.totalInterest}
               rows={[
-                { label: 'Your Money (Principal)', value: result.principal },
                 { label: 'Interest Earned', value: result.totalInterest, highlight: true, color: COLORS.accent },
                 ...(result.tdsApplicable ? [
                   { label: '⚠️ TDS Katega (10%)', value: result.tdsAmount, color: COLORS.warning },
@@ -131,14 +152,16 @@ export default function FDScreen() {
 
             {/* Donut Chart */}
             <DonutChart
-              title="Investment Breakdown"
+              title="Investment vs Earnings"
               segments={[
                 { value: result.principal, color: COLORS.primaryLight, label: 'Your Money' },
-                { value: result.totalInterest, color: COLORS.accent, label: 'Bank ka Tohfa 🎁' },
+                { value: result.totalInterest, color: COLORS.accent, label: 'Byaj (Earnings) 🎁' },
               ]}
-              centerLabel="Total"
+              centerLabel="Kul"
               centerValue={result.maturityAmount}
             />
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
 
             {/* Bar Chart */}
             {yearWise.length > 1 && (

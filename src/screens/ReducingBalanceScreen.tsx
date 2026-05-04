@@ -12,7 +12,9 @@ import { RiskBadge } from '../components/RiskBadge';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcReducingBalance, calcReducingBalanceSummary } from '../logic/reduce';
 import { useAppStore } from '../store/appStore';
-import { parseInput, isValidInput, formatINR } from '../utils/format';
+import { parseInput, isValidInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
+import { ResultActions } from '../components/ResultActions';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function ReducingBalanceScreen() {
@@ -22,6 +24,7 @@ export default function ReducingBalanceScreen() {
   const [summary, setSummary] = useState<ReturnType<typeof calcReducingBalanceSummary> | null>(null);
   const [schedule, setSchedule] = useState<ReturnType<typeof calcReducingBalance>>([]);
   const [showTable, setShowTable] = useState(false);
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -29,9 +32,6 @@ export default function ReducingBalanceScreen() {
   const principalRef = useRef(principal);
   const rateRef = useRef(rate);
   const monthsRef = useRef(months);
-  principalRef.current = principal;
-  rateRef.current = rate;
-  monthsRef.current = months;
 
 
   const calculate = () => {
@@ -46,6 +46,27 @@ export default function ReducingBalanceScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!summary) return;
+    saveCalculation({
+      type: 'ReducingBalance',
+      label: `Reduce: ${formatINRShort(parseInput(principalRef.current))}`,
+      result: summary.emi,
+      inputs: { principal: parseInput(principalRef.current), rate: parseInput(rateRef.current), months: parseInput(monthsRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!summary) return;
+    shareToWhatsApp('Reducing Balance', [
+      `Principal: ${formatINR(parseInput(principalRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: ${monthsRef.current} Months`,
+      `*Monthly EMI: ${formatINR(summary.emi)}*`,
+      `*Total Interest: ${formatINR(summary.totalInterest)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -94,6 +115,7 @@ export default function ReducingBalanceScreen() {
               ]}
               disclaimer="Results are estimates. Not financial advice."
             />
+            <ResultActions onSave={handleSave} onShare={handleShare} />
 
             {schedule.length > 0 && (
               <TouchableOpacity style={styles.tableToggle} onPress={() => setShowTable(!showTable)}>

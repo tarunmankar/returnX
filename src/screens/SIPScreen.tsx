@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RiskBadge } from '../components/RiskBadge';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { BarChart } from '../components/BarChart';
@@ -18,7 +19,8 @@ import { DonutChart } from '../components/DonutChart';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { calcSIP, calcSIPYearWise } from '../logic/sip';
 import { useAppStore } from '../store/appStore';
-import { parseInput, formatINR } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function SIPScreen() {
@@ -28,15 +30,12 @@ export default function SIPScreen() {
   const [result, setResult] = useState<ReturnType<typeof calcSIP> | null>(null);
   const [yearWise, setYearWise] = useState<ReturnType<typeof calcSIPYearWise>>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const monthlyRef = useRef(monthly);
   const rateRef = useRef(rate);
   const yearsRef = useRef(years);
-  monthlyRef.current = monthly;
-  rateRef.current = rate;
-  yearsRef.current = years;
 
   const calculate = () => {
     const P = parseInput(monthlyRef.current);
@@ -57,6 +56,28 @@ export default function SIPScreen() {
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
 
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'SIP',
+      label: `SIP ${formatINRShort(parseInput(monthlyRef.current))}/mo for ${yearsRef.current}Y`,
+      result: result.futureValue,
+      inputs: { amount: parseInput(monthlyRef.current), rate: parseInput(rateRef.current), years: parseInput(yearsRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('SIP Calculation', [
+      `Monthly SIP: ${formatINR(parseInput(monthlyRef.current))}`,
+      `Expected Rate: ${rateRef.current}%`,
+      `Duration: ${yearsRef.current} Years`,
+      `*Total Invested: ${formatINR(result.totalInvested)}*`,
+      `*Expected Returns: ${formatINR(result.totalReturns)}*`,
+      `*Final Value: ${formatINR(result.futureValue)}*`
+    ]);
+  };
+
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -66,9 +87,10 @@ export default function SIPScreen() {
   const R = parseInput(rate);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <ScreenHeader title="📈 SIP Calculator" subtitle="Systematic Investment Plan" />
+    <View style={styles.container}>
+      <ScreenHeader title="📈 SIP Calculator" subtitle="Systematic Investment Plan" />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* Tip */}
         <View style={styles.tipBanner}>
@@ -116,8 +138,9 @@ export default function SIPScreen() {
               title="SIP Returns Summary"
               mainAmount={result.futureValue}
               mainLabel="Future Value"
+              principalAmount={result.totalInvested}
+              interestAmount={result.totalReturns}
               rows={[
-                { label: 'Total Amount Invested', value: result.totalInvested },
                 { label: 'Returns 🎉', value: result.totalReturns, highlight: true, color: COLORS.accent },
                 { label: 'Wealth Multiplier', value: result.wealthRatio, isPercent: false, suffix: 'x', color: COLORS.accentLight },
               ]}
@@ -134,6 +157,8 @@ export default function SIPScreen() {
               centerLabel="Total Value"
               centerValue={result.futureValue}
             />
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
 
             {/* Bar Chart */}
             {yearWise.length > 1 && (
@@ -156,6 +181,7 @@ export default function SIPScreen() {
         <AdBannerPlaceholder size="banner" />
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 

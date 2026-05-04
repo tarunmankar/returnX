@@ -24,6 +24,8 @@ export type CalcType =
   | 'SSY'
   | 'NSC'
   | 'SBIAnnuity'
+  | 'StockProfit'
+  | 'NetReturn'
   | 'LIC';
 
 export interface HistoryEntry {
@@ -38,7 +40,7 @@ export interface HistoryEntry {
 export interface AppSettings {
   currency: '₹' | '$' | '€';
   riskThresholds: {
-    conservative: number; // default 10
+    conservative: number; // default 9
     moderate: number;     // default 15
   };
   darkMode: boolean;
@@ -50,10 +52,15 @@ interface AppState {
   settings: AppSettings;
   updateSettings: (partial: Partial<AppSettings>) => void;
 
-  // History
+  // History & Saved
   history: HistoryEntry[];
   addHistory: (entry: Omit<HistoryEntry, 'id' | 'date'>) => Promise<void>;
   clearHistory: () => Promise<void>;
+  
+  savedCalculations: HistoryEntry[];
+  saveCalculation: (entry: Omit<HistoryEntry, 'id' | 'date'>) => Promise<void>;
+  removeSavedCalculation: (id: string) => Promise<void>;
+  
   loadHistory: () => Promise<void>;
 
   // AdMob tracking
@@ -69,6 +76,7 @@ interface AppState {
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 
 const HISTORY_KEY = '@returnx_history';
+const SAVED_KEY = '@returnx_saved';
 const SETTINGS_KEY = '@returnx_settings';
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -77,7 +85,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Settings
   settings: {
     currency: '₹',
-    riskThresholds: { conservative: 10, moderate: 15 },
+    riskThresholds: { conservative: 9, moderate: 15 },
     darkMode: true,
     showAmortizationTable: false,
   },
@@ -113,10 +121,36 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (_) {}
   },
 
+  savedCalculations: [],
+
+  saveCalculation: async (entry) => {
+    const newEntry: HistoryEntry = {
+      ...entry,
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+    };
+    const updated = [newEntry, ...get().savedCalculations];
+    set({ savedCalculations: updated });
+    try {
+      await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(updated));
+    } catch (_) {}
+  },
+
+  removeSavedCalculation: async (id) => {
+    const updated = get().savedCalculations.filter((item) => item.id !== id);
+    set({ savedCalculations: updated });
+    try {
+      await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(updated));
+    } catch (_) {}
+  },
+
   loadHistory: async () => {
     try {
       const raw = await AsyncStorage.getItem(HISTORY_KEY);
       if (raw) set({ history: JSON.parse(raw) });
+
+      const savedRaw = await AsyncStorage.getItem(SAVED_KEY);
+      if (savedRaw) set({ savedCalculations: JSON.parse(savedRaw) });
 
       const settingsRaw = await AsyncStorage.getItem(SETTINGS_KEY);
       if (settingsRaw) set({ settings: JSON.parse(settingsRaw) });

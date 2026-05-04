@@ -33,24 +33,34 @@ interface CalcItem {
 const CALCULATORS: CalcItem[] = [
   // ── HIGH RISK / HIGH RETURN ──
   {
+    id: 'stockprofit',
+    title: 'Stock ROI & Profit',
+    titleSecondary: 'Absolute Return',
+    subtitle: 'Calculate exact Profit/Loss %',
+    icon: '💹',
+    route: '/screens/stock-profit',
+    tag: 'Safe Utility',
+    tagColor: '#D50000',
+  },
+  {
+    id: 'lumpsum',
+    title: 'Mutual Fund Lump Sum',
+    titleSecondary: 'One-time Investment',
+    subtitle: 'Direct Stocks or Lumpsum Mutual Funds',
+    icon: '🪙',
+    route: '/screens/lumpsum',
+    tag: 'Market Risk',
+    tagColor: '#FF6D00',
+  },
+  {
     id: 'sip',
     title: 'Mutual Fund SIP',
     titleSecondary: 'Monthly Investment',
     subtitle: 'Systematic Investment Plan',
     icon: '📈',
     route: '/screens/sip',
-    tag: 'High Return',
-    tagColor: '#F44336',
-  },
-  {
-    id: 'lumpsum',
-    title: 'Mutual Fund Lump Sum',
-    titleSecondary: 'One-time Investment',
-    subtitle: 'One-time investment in MF/Stocks',
-    icon: '🪙',
-    route: '/screens/lumpsum',
-    tag: 'High Return',
-    tagColor: '#F44336',
+    tag: 'Market Risk',
+    tagColor: '#FF6D00',
   },
   // ── MEDIUM RISK / MEDIUM RETURN ──
   {
@@ -159,13 +169,23 @@ const CALCULATORS: CalcItem[] = [
   },
   {
     id: 'compare',
-    title: 'Loan vs Invest',
+    title: 'Loan vs Invest (EMI)',
     titleSecondary: 'Which is better?',
     subtitle: 'Pay off loan or invest in SIP?',
     icon: '⚖️',
     route: '/screens/compare',
     tag: 'Hero ⭐',
     tagColor: COLORS.warning,
+  },
+  {
+    id: 'netreturn',
+    title: 'Net Return (Portfolio)',
+    titleSecondary: 'Investments vs Loan',
+    subtitle: 'Calculate Final Net +/- Position',
+    icon: '🧾',
+    route: '/screens/net-return',
+    tag: 'Net Worth',
+    tagColor: COLORS.accent,
   },
   // ── BASIC CALCULATORS ──
   {
@@ -189,27 +209,33 @@ const CALCULATORS: CalcItem[] = [
 // ── Risk-based Categories ──
 const CATEGORIES = [
   {
-    title: '🔴 High Risk · High Return',
-    subtitle: 'Stock Market & Mutual Funds',
-    ids: ['sip', 'lumpsum'],
-    headerColor: '#F44336',
+    title: '🔴 High Risk · Stock Market',
+    subtitle: 'Direct Investment in Equity',
+    ids: ['stockprofit'],
+    headerColor: '#D50000',
   },
   {
-    title: '🟡 Medium Risk · Guaranteed Income',
-    subtitle: 'Insurance & Fixed Income',
+    title: '🟠 Medium Risk · Mutual Funds',
+    subtitle: 'Market Linked SIPs & Lumpsum',
+    ids: ['sip', 'lumpsum'],
+    headerColor: '#FF6D00',
+  },
+  {
+    title: '🟡 Low Risk · Fixed Income',
+    subtitle: 'Bank FD, RD & Insurance',
     ids: ['lic', 'fd', 'rd', 'sbiannuity'],
-    headerColor: '#FF9800',
+    headerColor: '#FFD600',
   },
   {
     title: '🟢 No Risk · Govt Guaranteed',
-    subtitle: 'Safe Schemes with Tax Benefits',
+    subtitle: 'Safe Govt Schemes (PPF, SSY, etc.)',
     ids: ['ppf', 'ssy', 'nsc', 'scss', 'pomis'],
-    headerColor: COLORS.accent,
+    headerColor: '#00C853',
   },
   {
     title: '🏦 Loans & EMI',
     subtitle: 'Plan & manage your loans',
-    ids: ['emi', 'reducing', 'compare'],
+    ids: ['emi', 'reducing', 'compare', 'netreturn'],
     headerColor: COLORS.warning,
   },
   {
@@ -239,7 +265,7 @@ export default function HomeScreen() {
             <LogoWithBg size={52} bgColor={COLORS.primary} />
             <View>
               <Text style={styles.logoText}>ReturnX</Text>
-              <Text style={styles.tagline}>Smart Return Calculator</Text>
+              <Text style={styles.tagline}>Nivesh Calculator</Text>
             </View>
           </View>
         </View>
@@ -282,13 +308,9 @@ export default function HomeScreen() {
 
         {/* ── Bottom Navigation Bar ── */}
         <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/screens/history')}>
-            <Text style={styles.bottomNavIcon}>🕐</Text>
-            <Text style={styles.bottomNavText}>History</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/screens/settings')}>
-            <Text style={styles.bottomNavIcon}>⚙️</Text>
-            <Text style={styles.bottomNavText}>Settings</Text>
+          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/screens/saved')}>
+            <Text style={styles.bottomNavIcon}>💾</Text>
+            <Text style={styles.bottomNavText}>Saved</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/screens/disclaimer')}>
             <Text style={styles.bottomNavIcon}>⚠️</Text>
@@ -300,7 +322,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>ReturnX v1.0.0 • Made with ❤️ in India 🇮🇳</Text>
+        <Text style={styles.version}>ReturnX - Nivesh Calculator v1.0.0 • Made with ❤️ in India 🇮🇳</Text>
         <Text style={styles.disclaimer}>Calculator only — not financial advice</Text>
       </ScrollView>
     </View>

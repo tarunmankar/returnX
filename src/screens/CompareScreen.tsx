@@ -13,6 +13,8 @@ import { calcEMI } from '../logic/loan';
 import { calcSIP } from '../logic/sip';
 import { useAppStore } from '../store/appStore';
 import { parseInput, isValidInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
+import { ResultActions } from '../components/ResultActions';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function CompareScreen() {
@@ -27,7 +29,7 @@ export default function CompareScreen() {
   // Results
   const [loanResult, setLoanResult] = useState<ReturnType<typeof calcEMI> | null>(null);
   const [sipResult, setSipResult] = useState<ReturnType<typeof calcSIP> | null>(null);
-
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -36,10 +38,6 @@ export default function CompareScreen() {
   const loanRateRef = useRef(loanRate);
   const loanMonthsRef = useRef(loanMonths);
   const investRateRef = useRef(investRate);
-  loanAmountRef.current = loanAmount;
-  loanRateRef.current = loanRate;
-  loanMonthsRef.current = loanMonths;
-  investRateRef.current = investRate;
 
 
   const calculate = () => {
@@ -59,6 +57,27 @@ export default function CompareScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!sipResult || !loanResult) return;
+    saveCalculation({
+      type: 'Compare',
+      label: `Compare: ${formatINRShort(parseInput(loanAmountRef.current))} Loan`,
+      result: netFlow,
+      inputs: { loan: parseInput(loanAmountRef.current), rate: parseInput(loanRateRef.current), months: parseInput(loanMonthsRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!sipResult || !loanResult) return;
+    shareToWhatsApp('Loan vs Investment Compare', [
+      `Loan Amount: ${formatINR(parseInput(loanAmountRef.current))}`,
+      `Total Repayment: ${formatINR(loanResult.totalPayment)}`,
+      `EMI Investment Value: ${formatINR(sipResult.futureValue)}`,
+      `*Net Difference: ${formatINR(netFlow)}*`,
+      isProfit ? '✅ Investing beats loan cost!' : '❌ Loan cost exceeds investment'
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -154,6 +173,8 @@ export default function CompareScreen() {
                 {' '}in loan repayments.
               </Text>
             </View>
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
           </View>
         )}
 

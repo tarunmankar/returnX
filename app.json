@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ReturnX",
-    "slug": "returnx-calculator",
+    "name": "ReturnX - Nivesh Calculator",
+    "slug": "returnx-nivesh-calculator",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,14 +16,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.returnx.calculator"
+      "bundleIdentifier": "com.returnx.nivesh"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A2540"
       },
-      "package": "com.returnx.calculator",
+      "package": "com.returnx.nivesh",
       "edgeToEdgeEnabled": true,
       "permissions": [],
       "versionCode": 1,

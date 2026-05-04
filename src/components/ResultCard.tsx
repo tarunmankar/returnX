@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Animated,
   ViewStyle,
+  TouchableOpacity,
 } from 'react-native';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 import { formatINR, formatINRShort } from '../utils/format';
@@ -31,6 +32,10 @@ interface ResultCardProps {
   style?: ViewStyle;
   accentColor?: string;
   disclaimer?: string;
+  onSave?: () => void;
+  onShare?: () => void;
+  principalAmount?: number;
+  interestAmount?: number;
 }
 
 export const ResultCard: React.FC<ResultCardProps> = ({
@@ -39,13 +44,19 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   mainLabel = 'Total Value',
   rows = [],
   style,
-  accentColor = COLORS.accent,
+  accentColor = COLORS.chart3,
   disclaimer,
+  onSave,
+  onShare,
+  principalAmount,
+  interestAmount,
 }) => {
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const amountScaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Card entrance
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -59,6 +70,15 @@ export const ResultCard: React.FC<ResultCardProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Amount pop animation
+    amountScaleAnim.setValue(0.85);
+    Animated.spring(amountScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 120,
+      friction: 5,
+    }).start();
   }, [mainAmount]);
 
   return (
@@ -75,7 +95,10 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       </View>
 
       {/* Main Amount — Big Display */}
-      <View style={[styles.mainAmountContainer, { borderColor: accentColor + '33' }]}>
+      <Animated.View style={[
+        styles.mainAmountContainer, 
+        { borderColor: accentColor + '33', transform: [{ scale: amountScaleAnim }] }
+      ]}>
         <Text style={styles.mainLabel}>{mainLabel}</Text>
         <Text style={[styles.mainAmount, { color: accentColor }]}>
           {formatINR(mainAmount)}
@@ -85,7 +108,29 @@ export const ResultCard: React.FC<ResultCardProps> = ({
             {formatINRShort(mainAmount)}
           </Text>
         </View>
-      </View>
+      </Animated.View>
+
+      {/* Breakdown Strip — Principal + Interest */}
+      {(principalAmount !== undefined && interestAmount !== undefined) && (
+        <View style={styles.breakdownStrip}>
+          <View style={styles.breakdownItem}>
+            <Text style={styles.breakdownLabel}>Principal</Text>
+            <Text style={styles.breakdownValue}>{formatINRShort(principalAmount)}</Text>
+          </View>
+          <Text style={styles.breakdownPlus}>+</Text>
+          <View style={styles.breakdownItem}>
+            <Text style={styles.breakdownLabel}>Interest</Text>
+            <Text style={[styles.breakdownValue, { color: accentColor }]}>{formatINRShort(interestAmount)}</Text>
+          </View>
+          <Text style={styles.breakdownPlus}>=</Text>
+          <View style={styles.breakdownItem}>
+            <Text style={styles.breakdownLabel}>Total</Text>
+            <Text style={[styles.breakdownValue, styles.breakdownTotal, { color: accentColor }]}>
+              {formatINRShort(principalAmount + interestAmount)}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Divider */}
       {rows.length > 0 && <View style={styles.divider} />}
@@ -130,6 +175,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       {disclaimer && (
         <Text style={styles.disclaimer}>{disclaimer}</Text>
       )}
+
     </Animated.View>
   );
 };
@@ -149,16 +195,19 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   header: {
-    borderLeftWidth: 3,
-    paddingLeft: SPACING.sm,
+    paddingBottom: SPACING.xs,
     marginBottom: SPACING.base,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   title: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     color: COLORS.textSecondary,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
     textTransform: 'uppercase',
     letterSpacing: 1,
+    textAlign: 'center',
   },
   mainAmountContainer: {
     alignItems: 'center',
@@ -174,7 +223,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
   },
   mainAmount: {
     fontSize: 44,
@@ -194,6 +243,45 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.fontWeight.bold,
     letterSpacing: 0.3,
   },
+  breakdownStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  breakdownItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  breakdownLabel: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  breakdownValue: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
+    color: COLORS.textPrimary,
+  },
+  breakdownTotal: {
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontWeight: TYPOGRAPHY.fontWeight.extrabold,
+  },
+  breakdownPlus: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    color: COLORS.textSecondary,
+    paddingHorizontal: SPACING.xs,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
+  },
   divider: {
     height: 1,
     backgroundColor: COLORS.divider,
@@ -208,6 +296,7 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: TYPOGRAPHY.fontSize.base,
     color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
     flex: 1,
   },
   rowValue: {
@@ -250,10 +339,43 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     marginTop: SPACING.md,
     textAlign: 'center',
     fontStyle: 'italic',
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.xl,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.surfaceDark,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  shareBtn: {
+    backgroundColor: '#25D366' + '22',
+    borderColor: '#25D366',
+  },
+  actionIcon: {
+    fontSize: 16,
+  },
+  actionText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
+    color: COLORS.textPrimary,
   },
 });
 

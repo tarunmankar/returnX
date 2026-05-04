@@ -3,10 +3,10 @@ export const COLORS = {
   primary: '#0A2540',
   accent: '#00C853',
   warning: '#FFD600',
-  risk: '#D50000',
+  risk: '#FF5252',
 
   // Extended palette
-  primaryLight: '#0F3460',
+  primaryLight: '#4DABF7',
   primaryDark: '#061829',
   accentLight: '#69F0AE',
   accentDark: '#00952E',
@@ -37,7 +37,7 @@ export const COLORS = {
   // Risk levels
   conservative: '#00C853',
   moderate: '#FFD600',
-  aggressive: '#D50000',
+  aggressive: '#FF5252',
 
   // Chart colors
   chart1: '#00C853',

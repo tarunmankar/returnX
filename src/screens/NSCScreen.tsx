@@ -3,13 +3,15 @@ import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Touchable
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RateBanner } from '../components/RateBanner';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { DonutChart } from '../components/DonutChart';
 import { BarChart } from '../components/BarChart';
 import { calcNSC } from '../logic/nsc';
 import { useAppStore } from '../store/appStore';
-import { parseInput } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function NSCScreen() {
@@ -17,7 +19,7 @@ export default function NSCScreen() {
   const [rate, setRate] = useState('7.7');
   const [result, setResult] = useState<ReturnType<typeof calcNSC> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const principalRef = useRef(principal);
@@ -39,6 +41,27 @@ export default function NSCScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'NSC',
+      label: `NSC ${formatINRShort(parseInput(principalRef.current))}`,
+      result: result.maturityAmount,
+      inputs: { principal: parseInput(principalRef.current), rate: parseInput(rateRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('NSC Calculation', [
+      `Deposit Amount: ${formatINR(parseInput(principalRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: 5 Years`,
+      `*Interest Earned: ${formatINR(result.totalInterest)}*`,
+      `*Maturity Value: ${formatINR(result.maturityAmount)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -96,8 +119,9 @@ export default function NSCScreen() {
               mainAmount={result.maturityAmount}
               mainLabel="Value After 5 Years"
               accentColor={COLORS.accentLight}
+              principalAmount={result.principal}
+              interestAmount={result.totalInterest}
               rows={[
-                { label: 'Initial Deposit', value: result.principal },
                 { label: 'Total Interest Earned', value: result.totalInterest, highlight: true, color: COLORS.accentLight },
               ]}
               disclaimer="Eligible for deduction under Section 80C up to ₹1.5 Lakh."
@@ -108,9 +132,10 @@ export default function NSCScreen() {
                 { value: result.principal, color: COLORS.primaryLight, label: 'Invested' },
                 { value: result.totalInterest, color: COLORS.accentLight, label: 'Interest' },
               ]}
-              centerLabel="Maturity Value"
+              centerLabel="Maturity"
               centerValue={result.maturityAmount}
             />
+            <ResultActions onSave={handleSave} onShare={handleShare} />
             <BarChart
               title="Yearly Interest Accrual 📊"
               data={result.yearlyData.map(y => ({

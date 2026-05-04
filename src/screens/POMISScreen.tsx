@@ -3,12 +3,14 @@ import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Touchable
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RateBanner } from '../components/RateBanner';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { DonutChart } from '../components/DonutChart';
 import { calcPOMIS } from '../logic/pomis';
 import { useAppStore } from '../store/appStore';
-import { parseInput } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function POMISScreen() {
@@ -16,7 +18,7 @@ export default function POMISScreen() {
   const [rate, setRate] = useState('7.4');
   const [result, setResult] = useState<ReturnType<typeof calcPOMIS> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const principalRef = useRef(principal);
@@ -38,6 +40,27 @@ export default function POMISScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'POMIS',
+      label: `POMIS ${formatINRShort(parseInput(principalRef.current))}`,
+      result: result.monthlyPayout,
+      inputs: { amount: parseInput(principalRef.current), rate: parseInput(rateRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('POMIS Calculation', [
+      `Deposit Amount: ${formatINR(parseInput(principalRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: 5 Years`,
+      `*Monthly Payout: ${formatINR(result.monthlyPayout)}*`,
+      `*Total Interest: ${formatINR(result.totalInterestEarned)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -95,9 +118,11 @@ export default function POMISScreen() {
               mainAmount={result.monthlyPayout}
               mainLabel="Monthly Payout (Every Month)"
               accentColor={COLORS.warning}
+              principalAmount={result.principal}
+              interestAmount={result.totalInterestEarned}
               rows={[
-                { label: 'Initial Deposit', value: result.principal },
-                { label: 'Total Interest (5 Yrs)', value: result.totalInterestEarned, highlight: true, color: COLORS.warning },
+                { label: 'Total Interest (5 Yrs)', value: result.totalInterestEarned },
+                { label: '💰 Total Return (Principal + Interest)', value: result.totalReturns, highlight: true, color: COLORS.warning },
               ]}
               disclaimer="Interest earned is taxable as per your income tax slab. No TDS is deducted by Post Office."
             />
@@ -110,6 +135,8 @@ export default function POMISScreen() {
               centerLabel="Total Value"
               centerValue={result.totalReturns}
             />
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
           </View>
         )}
       </ScrollView>

@@ -7,7 +7,9 @@ import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { DonutChart } from '../components/DonutChart';
 import { calcSBIAnnuity } from '../logic/sbiAnnuity';
 import { useAppStore } from '../store/appStore';
-import { parseInput } from '../utils/format';
+import { parseInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
+import { ResultActions } from '../components/ResultActions';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function SBIAnnuityScreen() {
@@ -16,7 +18,7 @@ export default function SBIAnnuityScreen() {
   const [years, setYears] = useState('5');
   const [result, setResult] = useState<ReturnType<typeof calcSBIAnnuity> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { addHistory, incrementCalcCount } = useAppStore();
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const principalRef = useRef(principal);
@@ -50,6 +52,27 @@ export default function SBIAnnuityScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'SBIAnnuity',
+      label: `SBI Annuity: ${formatINRShort(parseInput(principalRef.current))}`,
+      result: result.monthlyPayout,
+      inputs: { principal: parseInput(principalRef.current), rate: parseInput(rateRef.current), years: parseInput(yearsRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('SBI Annuity', [
+      `Deposit Amount: ${formatINR(parseInput(principalRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: ${yearsRef.current} Years`,
+      `*Monthly Payout: ${formatINR(result.monthlyPayout)}*`,
+      `*Total Money Back: ${formatINR(result.totalReturns)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -125,10 +148,10 @@ export default function SBIAnnuityScreen() {
               title="Annuity Breakdown"
               mainAmount={result.monthlyPayout}
               mainLabel="Your Monthly Payout"
+              principalAmount={result.principal}
+              interestAmount={result.totalInterest}
               rows={[
-                { label: 'Total Deposited', value: result.principal },
-                { label: 'Total Interest Earned', value: result.totalInterest, highlight: true, color: COLORS.accent },
-                { label: 'Total Money Received Back', value: result.totalReturns },
+                { label: '💰 Total Money Back (Principal + Interest)', value: result.totalReturns, highlight: true, color: COLORS.accent },
               ]}
               disclaimer="TDS is applicable as per your tax slab. The principal is exhausted by the end of the tenure."
             />
@@ -142,6 +165,8 @@ export default function SBIAnnuityScreen() {
               centerLabel="Total Payouts"
               centerValue={result.totalReturns}
             />
+
+            <ResultActions onSave={handleSave} onShare={handleShare} />
           </View>
         )}
       </ScrollView>

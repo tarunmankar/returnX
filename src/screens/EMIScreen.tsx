@@ -11,11 +11,13 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RiskBadge } from '../components/RiskBadge';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcEMI, calcAmortizationYearly } from '../logic/loan';
 import { useAppStore } from '../store/appStore';
-import { parseInput, isValidInput, formatINR } from '../utils/format';
+import { parseInput, isValidInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function EMIScreen() {
@@ -25,6 +27,7 @@ export default function EMIScreen() {
   const [result, setResult] = useState<ReturnType<typeof calcEMI> | null>(null);
   const [yearlyBreakdown, setYearlyBreakdown] = useState<ReturnType<typeof calcAmortizationYearly>>([]);
   const [showTable, setShowTable] = useState(false);
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -32,9 +35,6 @@ export default function EMIScreen() {
   const principalRef = useRef(principal);
   const rateRef = useRef(rate);
   const tenureRef = useRef(tenure);
-  principalRef.current = principal;
-  rateRef.current = rate;
-  tenureRef.current = tenure;
 
 
   const calculate = () => {
@@ -49,6 +49,28 @@ export default function EMIScreen() {
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
 
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'EMI',
+      label: `EMI for ${formatINRShort(parseInput(principalRef.current))} Loan`,
+      result: result.emi,
+      inputs: { principal: parseInput(principalRef.current), rate: parseInput(rateRef.current), months: parseInput(tenureRef.current) },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('EMI Calculation', [
+      `Loan Amount: ${formatINR(parseInput(principalRef.current))}`,
+      `Interest Rate: ${rateRef.current}%`,
+      `Tenure: ${tenureRef.current} Months`,
+      `*Monthly EMI: ${formatINR(result.emi)}*`,
+      `*Total Interest: ${formatINR(result.totalInterest)}*`,
+      `*Total Payment: ${formatINR(result.totalPayment)}*`
+    ]);
+  };
+
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -58,11 +80,11 @@ export default function EMIScreen() {
   const R = parseInput(rateRef.current);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <ScreenHeader title="🏦 EMI Calculator" subtitle="Equated Monthly Installment" />
-
-        <View style={styles.section}>
+    <View style={styles.container}>
+      <ScreenHeader title="🏦 EMI Calculator" subtitle="Equated Monthly Installment" />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View style={styles.section}>
           <InputCard
             label="Deposit Amount"
             defaultValue={principal}
@@ -117,6 +139,8 @@ export default function EMIScreen() {
               </View>
             </View>
 
+            <ResultActions onSave={handleSave} onShare={handleShare} />
+
             {/* Yearly breakdown table toggle */}
             {yearlyBreakdown.length > 0 && (
               <TouchableOpacity style={styles.tableToggle} onPress={() => setShowTable(!showTable)}>
@@ -146,8 +170,9 @@ export default function EMIScreen() {
         )}
 
         <AdBannerPlaceholder size="banner" />
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 

@@ -82,7 +82,7 @@ export const LogoHeader: React.FC<LogoHeaderProps> = ({
           ReturnX
         </Text>
         {showTagline && (
-          <Text style={styles.tagline}>Smart Return Calculator</Text>
+          <Text style={styles.tagline}>Nivesh Calculator</Text>
         )}
       </View>
     </View>

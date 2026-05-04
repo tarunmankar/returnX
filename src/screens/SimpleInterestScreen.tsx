@@ -8,11 +8,13 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RiskBadge } from '../components/RiskBadge';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcSimpleInterest } from '../logic/interest';
 import { useAppStore } from '../store/appStore';
-import { parseInput, isValidInput } from '../utils/format';
+import { parseInput, isValidInput, formatINR, formatINRShort } from '../utils/format';
+import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 export default function SimpleInterestScreen() {
@@ -20,6 +22,7 @@ export default function SimpleInterestScreen() {
   const [rate, setRate] = useState('8');
   const [years, setYears] = useState('5');
   const [result, setResult] = useState<ReturnType<typeof calcSimpleInterest> | null>(null);
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -42,6 +45,31 @@ export default function SimpleInterestScreen() {
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
+
+  const handleSave = () => {
+    if (!result) return;
+    saveCalculation({
+      type: 'SimpleInterest',
+      label: `SI ${formatINRShort(parseInput(principalRef.current))} @ ${rateRef.current}%`,
+      result: result.totalAmount,
+      inputs: { 
+        principal: parseInput(principalRef.current), 
+        rate: parseInput(rateRef.current), 
+        years: parseInput(yearsRef.current) 
+      },
+    });
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    shareToWhatsApp('Simple Interest', [
+      `Principal: ${formatINR(parseInput(principalRef.current))}`,
+      `Rate: ${rateRef.current}%`,
+      `Time: ${yearsRef.current} Years`,
+      `*Simple Interest: ${formatINR(result.interest)}*`,
+      `*Total Amount: ${formatINR(result.totalAmount)}*`
+    ]);
+  };
 
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
@@ -82,14 +110,16 @@ export default function SimpleInterestScreen() {
               title="Simple Interest Result"
               mainAmount={result.totalAmount}
               mainLabel="Total Amount"
+              principalAmount={result.principal}
+              interestAmount={result.interest}
               rows={[
-                { label: 'Principal (P)', value: result.principal },
                 { label: 'Simple Interest (SI)', value: result.interest, highlight: true, color: COLORS.accent },
                 { label: 'Rate (R)', value: result.rate, isPercent: true },
                 { label: 'Time (T)', value: result.time, isPercent: false, suffix: ' years' },
               ]}
               disclaimer="Results are estimates. Not financial advice."
             />
+            <ResultActions onSave={handleSave} onShare={handleShare} />
           </View>
         )}
         <AdBannerPlaceholder size="banner" />
