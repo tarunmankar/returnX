@@ -1,8 +1,8 @@
 /**
  * ReturnX - RateBanner Component
- * Compact inline-editable rate banner. Fully uncontrolled internally.
+ * Compact inline-editable rate banner with source context.
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
@@ -11,6 +11,10 @@ interface RateBannerProps {
   onRateChange: (v: string) => void;
   details?: string;
   accentColor?: string;
+  label?: string;
+  sourceLabel?: string;
+  reviewedOn?: string;
+  warningText?: string;
 }
 
 export const RateBanner: React.FC<RateBannerProps> = ({
@@ -18,21 +22,33 @@ export const RateBanner: React.FC<RateBannerProps> = ({
   onRateChange,
   details,
   accentColor = COLORS.accent,
+  label = 'Reference Rate',
+  sourceLabel,
+  reviewedOn,
+  warningText,
 }) => {
   const [focused, setFocused] = useState(false);
+  const [rateValue, setRateValue] = useState(defaultRate);
+
+  useEffect(() => {
+    setRateValue(defaultRate);
+  }, [defaultRate]);
 
   return (
     <View style={[styles.banner, { borderColor: accentColor + '44' }]}>
       <View style={[styles.rateBox, focused && { borderColor: accentColor, borderWidth: 2 }]}>
         <View style={styles.rateLabelRow}>
           <Text style={styles.pencilIcon}>✏️</Text>
-          <Text style={[styles.rateLabel, { color: accentColor }]}>Rate</Text>
+          <Text style={[styles.rateLabel, { color: accentColor }]}>{label}</Text>
         </View>
         <View style={styles.rateRow}>
           <TextInput
             style={[styles.rateInput, { color: accentColor }]}
-            defaultValue={defaultRate}
-            onChangeText={onRateChange}
+            value={rateValue}
+            onChangeText={(next) => {
+              setRateValue(next);
+              onRateChange(next);
+            }}
             keyboardType="decimal-pad"
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
@@ -46,6 +62,14 @@ export const RateBanner: React.FC<RateBannerProps> = ({
 
       {details ? (
         <Text style={styles.details}>{details}</Text>
+      ) : null}
+
+      {(sourceLabel || reviewedOn || warningText) ? (
+        <View style={styles.metaBlock}>
+          {sourceLabel ? <Text style={styles.metaText}>Source: {sourceLabel}</Text> : null}
+          {reviewedOn ? <Text style={styles.metaText}>Reviewed: {reviewedOn}</Text> : null}
+          {warningText ? <Text style={styles.warningText}>{warningText}</Text> : null}
+        </View>
       ) : null}
     </View>
   );
@@ -103,5 +127,22 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
     textAlign: 'right',
+  },
+  metaBlock: {
+    width: '100%',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.sm,
+    gap: 2,
+  },
+  metaText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: COLORS.textMuted,
+  },
+  warningText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+    marginTop: 2,
   },
 });

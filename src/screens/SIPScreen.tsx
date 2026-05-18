@@ -17,16 +17,21 @@ import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { BarChart } from '../components/BarChart';
 import { DonutChart } from '../components/DonutChart';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
-import { calcSIP, calcSIPYearWise } from '../logic/sip';
+import { OptionChips } from '../components/OptionChips';
+import { calcInflationAdjustedValue, calcRequiredSIPForGoal, calcSIP, calcSIPYearWise } from '../logic/sip';
 import { useAppStore } from '../store/appStore';
 import { parseInput, formatINR, formatINRShort } from '../utils/format';
 import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
+import { MARKET_RETURN_WARNING } from '../constants/compliance';
 
 export default function SIPScreen() {
   const [monthly, setMonthly] = useState('10000');
   const [rate, setRate] = useState('12');
   const [years, setYears] = useState('10');
+  const [stepUp, setStepUp] = useState('0');
+  const [goalAmount, setGoalAmount] = useState('');
+  const [inflationRate, setInflationRate] = useState('6');
   const [result, setResult] = useState<ReturnType<typeof calcSIP> | null>(null);
   const [yearWise, setYearWise] = useState<ReturnType<typeof calcSIPYearWise>>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -36,22 +41,29 @@ export default function SIPScreen() {
   const monthlyRef = useRef(monthly);
   const rateRef = useRef(rate);
   const yearsRef = useRef(years);
+  const stepUpRef = useRef(stepUp);
+  const goalRef = useRef(goalAmount);
+  const inflationRef = useRef(inflationRate);
 
   const calculate = () => {
     const P = parseInput(monthlyRef.current);
     const R = parseInput(rateRef.current);
     const T = parseInput(yearsRef.current);
+    const annualStepUp = parseInput(stepUpRef.current);
+    const inflation = parseInput(inflationRef.current);
 
     const validation = validateInputs({
       monthly: { value: P, label: 'Monthly Amount', min: 100 },
       years: { value: T, label: 'Duration', min: 1, max: 50 },
+      stepUp: { value: annualStepUp + 1, label: 'Step-Up', min: 1, max: 26 },
+      inflation: { value: inflation + 1, label: 'Inflation', min: 1, max: 16 },
     });
     setErrors(validation.errors);
     if (!validation.valid) return;
 
-    const res = calcSIP(P, R, T);
+    const res = calcSIP(P, R, T, annualStepUp);
     setResult(res);
-    setYearWise(calcSIPYearWise(P, R, T));
+    setYearWise(calcSIPYearWise(P, R, T, annualStepUp));
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
@@ -62,7 +74,12 @@ export default function SIPScreen() {
       type: 'SIP',
       label: `SIP ${formatINRShort(parseInput(monthlyRef.current))}/mo for ${yearsRef.current}Y`,
       result: result.futureValue,
-      inputs: { amount: parseInput(monthlyRef.current), rate: parseInput(rateRef.current), years: parseInput(yearsRef.current) },
+      inputs: {
+        amount: parseInput(monthlyRef.current),
+        rate: parseInput(rateRef.current),
+        years: parseInput(yearsRef.current),
+        stepUp: parseInput(stepUpRef.current),
+      },
     });
   };
 
@@ -72,6 +89,7 @@ export default function SIPScreen() {
       `Monthly SIP: ${formatINR(parseInput(monthlyRef.current))}`,
       `Expected Rate: ${rateRef.current}%`,
       `Duration: ${yearsRef.current} Years`,
+      `Step-Up: ${stepUpRef.current || '0'}% / year`,
       `*Total Invested: ${formatINR(result.totalInvested)}*`,
       `*Expected Returns: ${formatINR(result.totalReturns)}*`,
       `*Final Value: ${formatINR(result.futureValue)}*`
@@ -88,6 +106,15 @@ export default function SIPScreen() {
   };
 
   const R = parseInput(rate);
+  const currentStepUp = parseInput(stepUp);
+  const currentInflation = parseInput(inflationRate);
+  const currentGoal = parseInput(goalAmount);
+  const inflationAdjustedValue = result
+    ? calcInflationAdjustedValue(result.futureValue, currentInflation, parseInput(yearsRef.current))
+    : 0;
+  const requiredSip = currentGoal > 0
+    ? calcRequiredSIPForGoal(currentGoal, parseInput(rateRef.current), parseInput(yearsRef.current), currentStepUp)
+    : 0;
 
   return (
     <View style={styles.container}>
@@ -116,9 +143,40 @@ export default function SIPScreen() {
             label="Tenure (Years)"
             defaultValue={years}
             onChangeText={handleInput(setYears, yearsRef)} prefix="" suffix="Years" placeholder="10" hint="Longer tenure means more compounding 🚀" />
+          <InputCard
+            label="Step-Up Every Year"
+            defaultValue={stepUp}
+            onChangeText={handleInput(setStepUp, stepUpRef)} prefix="" suffix="%"
+            placeholder="0" keyboardType="decimal-pad" hint="Salary badhne par SIP ko yearly increase karein" />
+          <InputCard
+            label="Goal Corpus (Optional)"
+            defaultValue={goalAmount}
+            onChangeText={handleInput(setGoalAmount, goalRef)} prefix="₹"
+            placeholder="50,00,000" hint="Target amount dalo to required SIP niklega" />
+          <InputCard
+            label="Inflation Rate"
+            defaultValue={inflationRate}
+            onChangeText={handleInput(setInflationRate, inflationRef)} prefix="" suffix="%"
+            placeholder="6" keyboardType="decimal-pad" hint="Real buying power dekhne ke liye use hota hai" />
           <ErrorMessage message={errors.years || null} />
 
           {R > 0 && <RiskBadge rate={R} showDescription />}
+          <ErrorMessage message={errors.stepUp || errors.inflation || null} />
+
+          <OptionChips
+            label="Popular Step-Up"
+            options={[
+              { label: '0%', value: '0' },
+              { label: '5%', value: '5' },
+              { label: '10%', value: '10' },
+            ]}
+            value={stepUp}
+            onChange={(value) => {
+              setStepUp(value);
+              stepUpRef.current = value;
+              setTimeout(() => calculate(), 100);
+            }}
+          />
 
           {/* Quick presets */}
           <View style={styles.presetRow}>
@@ -145,10 +203,27 @@ export default function SIPScreen() {
               interestAmount={result.totalReturns}
               rows={[
                 { label: 'Returns 🎉', value: result.totalReturns, highlight: true, color: COLORS.accent },
+                ...(currentStepUp > 0 ? [{ label: 'Annual Step-Up', value: currentStepUp, isPercent: false, suffix: '%' }] : []),
+                { label: 'Inflation-Adjusted Value', value: inflationAdjustedValue, color: COLORS.warning },
                 { label: 'Wealth Multiplier', value: result.wealthRatio, isPercent: false, suffix: 'x', color: COLORS.accentLight },
               ]}
-              disclaimer="This is an estimate. Actual market returns may vary. Not financial advice."
+              disclaimer={MARKET_RETURN_WARNING}
             />
+
+            {currentGoal > 0 && (
+              <ResultCard
+                title="Goal Planning"
+                mainAmount={requiredSip}
+                mainLabel="Required Monthly SIP"
+                accentColor={COLORS.warning}
+                rows={[
+                  { label: 'Target Corpus', value: currentGoal },
+                  { label: 'Current Projection', value: result.futureValue, color: COLORS.accent },
+                  { label: 'Gap / Surplus', value: result.futureValue - currentGoal, color: result.futureValue >= currentGoal ? COLORS.accent : COLORS.risk },
+                ]}
+                disclaimer="Required SIP assumes the same return and step-up settings. Actual market returns may vary."
+              />
+            )}
 
             {/* Donut Chart */}
             <DonutChart

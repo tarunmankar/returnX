@@ -12,6 +12,16 @@ export interface EMIResult {
   months: number;
 }
 
+export interface PrepaymentImpactResult {
+  originalEMI: number;
+  revisedMonths: number;
+  revisedTotalInterest: number;
+  interestSaved: number;
+  monthsSaved: number;
+  extraMonthly: number;
+  startMonth: number;
+}
+
 export interface AmortizationRow {
   month: number;
   emi: number;
@@ -107,6 +117,68 @@ export function calcAmortizationYearly(P: number, R: number, months: number): {
     year: Number(year),
     ...data,
   }));
+}
+
+export function calcLoanPrepaymentImpact(
+  P: number,
+  R: number,
+  months: number,
+  extraMonthly: number,
+  startMonth: number = 1
+): PrepaymentImpactResult {
+  const baseline = calcEMI(P, R, months);
+
+  if (P <= 0 || months <= 0 || extraMonthly <= 0) {
+    return {
+      originalEMI: baseline.emi,
+      revisedMonths: baseline.months,
+      revisedTotalInterest: baseline.totalInterest,
+      interestSaved: 0,
+      monthsSaved: 0,
+      extraMonthly: Math.max(0, extraMonthly),
+      startMonth: Math.max(1, startMonth),
+    };
+  }
+
+  if (R === 0) {
+    const effectiveEMI = baseline.emi + extraMonthly;
+    const revisedMonths = Math.ceil(P / effectiveEMI);
+    return {
+      originalEMI: baseline.emi,
+      revisedMonths,
+      revisedTotalInterest: 0,
+      interestSaved: 0,
+      monthsSaved: Math.max(0, baseline.months - revisedMonths),
+      extraMonthly,
+      startMonth: Math.max(1, startMonth),
+    };
+  }
+
+  const monthlyRate = R / 100 / 12;
+  let balance = P;
+  let revisedMonths = 0;
+  let revisedTotalInterest = 0;
+  const paymentStartMonth = Math.max(1, Math.min(startMonth, months));
+
+  while (balance > 0 && revisedMonths < months * 2) {
+    revisedMonths += 1;
+    const interest = balance * monthlyRate;
+    revisedTotalInterest += interest;
+    const extra = revisedMonths >= paymentStartMonth ? extraMonthly : 0;
+    const payment = Math.min(balance + interest, baseline.emi + extra);
+    const principalPaid = payment - interest;
+    balance = Math.max(0, balance - principalPaid);
+  }
+
+  return {
+    originalEMI: baseline.emi,
+    revisedMonths,
+    revisedTotalInterest: Math.round(revisedTotalInterest),
+    interestSaved: Math.max(0, baseline.totalInterest - Math.round(revisedTotalInterest)),
+    monthsSaved: Math.max(0, baseline.months - revisedMonths),
+    extraMonthly,
+    startMonth: paymentStartMonth,
+  };
 }
 
 // Dev test

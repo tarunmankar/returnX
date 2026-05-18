@@ -7,15 +7,18 @@ import { ResultActions } from '../components/ResultActions';
 import { RateBanner } from '../components/RateBanner';
 import { ErrorMessage, validateInputs } from '../components/ErrorMessage';
 import { DonutChart } from '../components/DonutChart';
+import { OptionChips } from '../components/OptionChips';
 import { calcSCSS } from '../logic/scss';
 import { useAppStore } from '../store/appStore';
 import { parseInput, formatINR, formatINRShort } from '../utils/format';
 import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
+import { GOVT_RATE_REVIEWED_ON, GOVT_RATE_SOURCE, GOVT_RATE_WARNING } from '../constants/compliance';
 
 export default function SCSSScreen() {
   const [principal, setPrincipal] = useState('1500000');
   const [rate, setRate] = useState('8.2');
+  const [taxRate, setTaxRate] = useState<'0' | '5' | '20' | '30'>('20');
   const [result, setResult] = useState<ReturnType<typeof calcSCSS> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
@@ -35,7 +38,7 @@ export default function SCSSScreen() {
     });
     setErrors(validation.errors);
     if (!validation.valid) return;
-    const res = calcSCSS(P, R);
+    const res = calcSCSS(P, R, parseInput(taxRate));
     setResult(res);
   };
 
@@ -77,12 +80,27 @@ export default function SCSSScreen() {
         <RateBanner
           defaultRate={rate}
           onRateChange={handleInput(setRate, rateRef)}
-          details={"Max Limit: ₹30 Lakh\nTenure: 5 Years\nPayout: Quarterly"}
+          details={"Max Limit: ₹30 Lakh\nTenure: 5 Years | Payout: Quarterly"}
           accentColor={COLORS.chart2}
+          sourceLabel={GOVT_RATE_SOURCE}
+          reviewedOn={GOVT_RATE_REVIEWED_ON}
+          warningText={GOVT_RATE_WARNING}
         />
         {errors.rate ? <Text style={styles.rateError}>{errors.rate}</Text> : null}
 
         <View style={styles.section}>
+          <OptionChips
+            label="Tax Slab Estimate"
+            options={[
+              { label: '0%', value: '0' },
+              { label: '5%', value: '5' },
+              { label: '20%', value: '20' },
+              { label: '30%', value: '30' },
+            ]}
+            value={taxRate}
+            onChange={(value) => { setTaxRate(value); setTimeout(() => calculate(), 100); }}
+            accentColor={COLORS.chart2}
+          />
           <InputCard
             label="Deposit Amount"
             defaultValue={principal}
@@ -122,9 +140,11 @@ export default function SCSSScreen() {
               interestAmount={result.totalInterestEarned}
               rows={[
                 { label: 'Total Interest (5 Yrs)', value: result.totalInterestEarned },
+                { label: 'Estimated Tax', value: result.estimatedTax, color: COLORS.warning },
+                { label: 'Post-Tax Quarterly Payout', value: result.postTaxQuarterlyPayout, color: COLORS.accent },
                 { label: '💰 Total Return (Principal + Interest)', value: result.totalReturns, highlight: true, color: COLORS.accent },
               ]}
-              disclaimer="Interest is fully taxable. TDS may be deducted if interest exceeds ₹50,000/year under Sec 80TTB."
+              disclaimer="Interest is taxable and TDS rules can change. Reference rate only; verify the latest govt notification and current tax rules before investing. Not financial advice."
             />
             <DonutChart
               title="Principal vs Interest"

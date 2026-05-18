@@ -17,6 +17,7 @@ import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { BarChart } from '../components/BarChart';
 import { DonutChart } from '../components/DonutChart';
 import { ErrorMessage, RateQuickSelect, validateInputs, Toast } from '../components/ErrorMessage';
+import { OptionChips } from '../components/OptionChips';
 import { calcFD, calcFDYearWise, POPULAR_FD_RATES } from '../logic/fd';
 import { useAppStore } from '../store/appStore';
 import { parseInput, formatINR, formatINRShort } from '../utils/format';
@@ -27,6 +28,8 @@ export default function FDScreen() {
   const [amount, setAmount] = useState('100000');
   const [rate, setRate] = useState('7.0');
   const [months, setMonths] = useState('12');
+  const [taxRate, setTaxRate] = useState<'0' | '5' | '20' | '30'>('20');
+  const [seniorCitizen, setSeniorCitizen] = useState<'No' | 'Yes'>('No');
   const [result, setResult] = useState<ReturnType<typeof calcFD> | null>(null);
   const [yearWise, setYearWise] = useState<ReturnType<typeof calcFDYearWise>>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,12 +55,15 @@ export default function FDScreen() {
     setErrors(validation.errors);
     if (!validation.valid) return;
 
-    const res = calcFD(P, R, M);
+    const res = calcFD(P, R, M, true, {
+      taxRate: parseInput(taxRate),
+      seniorCitizen: seniorCitizen === 'Yes',
+    });
     setResult(res);
     setYearWise(calcFDYearWise(P, R, M));
 
     if (res.tdsApplicable) {
-      setToastMsg('⚠️ TDS applicable: Interest > ₹40,000');
+      setToastMsg(`⚠️ TDS applicable: Interest > ${formatINR(res.tdsThreshold)}`);
       setShowToast(true);
     }
   };
@@ -112,6 +118,27 @@ export default function FDScreen() {
             rates={POPULAR_FD_RATES}
             onSelect={(r) => { setRate(String(r)); setTimeout(() => calculate(), 100); }}
           />
+          <OptionChips
+            label="Tax Slab Estimate"
+            options={[
+              { label: '0%', value: '0' },
+              { label: '5%', value: '5' },
+              { label: '20%', value: '20' },
+              { label: '30%', value: '30' },
+            ]}
+            value={taxRate}
+            onChange={(value) => { setTaxRate(value); setTimeout(() => calculate(), 100); }}
+          />
+          <OptionChips
+            label="Senior Citizen"
+            options={[
+              { label: 'No', value: 'No' },
+              { label: 'Yes', value: 'Yes' },
+            ]}
+            value={seniorCitizen}
+            onChange={(value) => { setSeniorCitizen(value); setTimeout(() => calculate(), 100); }}
+            accentColor={COLORS.warning}
+          />
           <InputCard
             label="Investment Amount"
             defaultValue={amount}
@@ -142,12 +169,14 @@ export default function FDScreen() {
               interestAmount={result.totalInterest}
               rows={[
                 { label: 'Interest Earned', value: result.totalInterest, highlight: true, color: COLORS.accent },
+                { label: 'Estimated Tax', value: result.estimatedTax, color: COLORS.warning },
+                { label: 'Post-Tax Maturity', value: result.postTaxMaturity, color: COLORS.accent },
                 ...(result.tdsApplicable ? [
                   { label: '⚠️ TDS Katega (10%)', value: result.tdsAmount, color: COLORS.warning },
-                  { label: 'Haath Mein Aayega', value: result.principal + result.postTaxInterest, color: COLORS.accent },
+                  { label: 'TDS Trigger Limit', value: result.tdsThreshold, color: COLORS.textSecondary },
                 ] : []),
               ]}
-              disclaimer="Yeh estimate hai. Actual returns alag ho sakti hain. Financial advice nahi."
+              disclaimer="Tax estimate selected slab par based hai. Actual FD tax, TDS credit, aur exemptions alag ho sakte hain. Financial advice nahi."
             />
 
             {/* Donut Chart */}
@@ -186,7 +215,7 @@ export default function FDScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.tdsTitle}>TDS Notice</Text>
                   <Text style={styles.tdsText}>
-                    Aapki byaj {formatINR(result.totalInterest)} hai jo ₹40,000 se zyada hai. Bank {formatINR(result.tdsAmount)} TDS (10%) katega. Form 15G/15H bharke TDS bachaya ja sakta hai.
+                    Aapki byaj {formatINR(result.totalInterest)} hai jo {formatINR(result.tdsThreshold)} se zyada hai. Bank {formatINR(result.tdsAmount)} TDS (10%) katega. Form 15G/15H bharke TDS credit claim kiya ja sakta hai.
                   </Text>
                 </View>
               </View>

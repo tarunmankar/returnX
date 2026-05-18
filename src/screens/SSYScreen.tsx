@@ -13,6 +13,7 @@ import { useAppStore } from '../store/appStore';
 import { parseInput, formatINR, formatINRShort } from '../utils/format';
 import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
+import { GOVT_RATE_REVIEWED_ON, GOVT_RATE_SOURCE, GOVT_RATE_WARNING } from '../constants/compliance';
 
 export default function SSYScreen() {
   const [yearlyDeposit, setYearlyDeposit] = useState('100000');
@@ -76,8 +77,11 @@ export default function SSYScreen() {
         <RateBanner
           defaultRate={rate}
           onRateChange={handleInput(setRate, rateRef)}
-          details={"Deposit 15 years | Matures at 21 years\nTax Free (EEE) | Govt. Guaranteed"}
+          details={"Deposit 15 years | Matures at 21 years\nEEE treatment under current rules | Sovereign-backed account"}
           accentColor={'#E91E63'}
+          sourceLabel={GOVT_RATE_SOURCE}
+          reviewedOn={GOVT_RATE_REVIEWED_ON}
+          warningText={GOVT_RATE_WARNING}
         />
         {errors.rate ? <Text style={styles.rateError}>{errors.rate}</Text> : null}
 
@@ -122,7 +126,7 @@ export default function SSYScreen() {
               rows={[
                 { label: 'Total Interest Earned', value: result.totalInterest, highlight: true, color: '#E91E63' },
               ]}
-              disclaimer="Completely Tax Free (EEE Status) under Section 80C."
+              disclaimer="EEE tax treatment depends on prevailing rules. Reference rate only; verify the latest govt notification before investing. Not financial advice."
             />
             <DonutChart
               title="Investment vs Interest"

@@ -13,7 +13,7 @@ import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
 import { ResultActions } from '../components/ResultActions';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
-import { calcEMI, calcAmortizationYearly } from '../logic/loan';
+import { calcAmortizationYearly, calcEMI, calcLoanPrepaymentImpact, PrepaymentImpactResult } from '../logic/loan';
 import { useAppStore } from '../store/appStore';
 import { parseInput, isValidInput, formatINR, formatINRShort } from '../utils/format';
 import { shareToWhatsApp } from '../utils/share';
@@ -23,8 +23,11 @@ export default function EMIScreen() {
   const [principal, setPrincipal] = useState('2000000');
   const [rate, setRate] = useState('8.5');
   const [tenure, setTenure] = useState('240');
+  const [extraPayment, setExtraPayment] = useState('0');
+  const [prepayStartMonth, setPrepayStartMonth] = useState('1');
   const [result, setResult] = useState<ReturnType<typeof calcEMI> | null>(null);
   const [yearlyBreakdown, setYearlyBreakdown] = useState<ReturnType<typeof calcAmortizationYearly>>([]);
+  const [prepaymentImpact, setPrepaymentImpact] = useState<PrepaymentImpactResult | null>(null);
   const [showTable, setShowTable] = useState(false);
   const { incrementCalcCount, saveCalculation } = useAppStore();
   
@@ -34,16 +37,21 @@ export default function EMIScreen() {
   const principalRef = useRef(principal);
   const rateRef = useRef(rate);
   const tenureRef = useRef(tenure);
+  const extraPaymentRef = useRef(extraPayment);
+  const prepayStartRef = useRef(prepayStartMonth);
 
 
   const calculate = () => {
     const P = parseInput(principalRef.current);
     const R = parseInput(rateRef.current);
     const M = parseInput(tenureRef.current);
+    const extra = parseInput(extraPaymentRef.current);
+    const startMonth = parseInput(prepayStartRef.current);
     if (!isValidInput(P) || R < 0 || !isValidInput(M)) return;
     const res = calcEMI(P, R, M);
     setResult(res);
     setYearlyBreakdown(calcAmortizationYearly(P, R, M));
+    setPrepaymentImpact(calcLoanPrepaymentImpact(P, R, M, extra, startMonth));
   };
 
   const onPressCalculate = () => { calculate(); incrementCalcCount(); };
@@ -64,6 +72,7 @@ export default function EMIScreen() {
       `Loan Amount: ${formatINR(parseInput(principalRef.current))}`,
       `Interest Rate: ${rateRef.current}%`,
       `Tenure: ${tenureRef.current} Months`,
+      `Extra Prepayment: ${formatINR(parseInput(extraPaymentRef.current))}/month`,
       `*Monthly EMI: ${formatINR(result.emi)}*`,
       `*Total Interest: ${formatINR(result.totalInterest)}*`,
       `*Total Payment: ${formatINR(result.totalPayment)}*`
@@ -96,6 +105,14 @@ export default function EMIScreen() {
             label="Tenure (Years)"
             defaultValue={tenure}
             onChangeText={handleInput(setTenure, tenureRef)} prefix="" suffix="Months" placeholder="240" hint="240 months = 20 years" />
+          <InputCard
+            label="Extra Prepayment / Month"
+            defaultValue={extraPayment}
+            onChangeText={handleInput(setExtraPayment, extraPaymentRef)} prefix="₹" placeholder="0" hint="Optional EMI ke upar extra payment" />
+          <InputCard
+            label="Prepayment Start Month"
+            defaultValue={prepayStartMonth}
+            onChangeText={handleInput(setPrepayStartMonth, prepayStartRef)} prefix="" suffix="Month" placeholder="1" hint="Kis month se extra payment start hogi" />
         </View>
 
         <TouchableOpacity style={styles.calcBtn} onPress={onPressCalculate} activeOpacity={0.8}>
@@ -138,6 +155,22 @@ export default function EMIScreen() {
             </View>
 
             <ResultActions onSave={handleSave} onShare={handleShare} />
+
+            {prepaymentImpact && prepaymentImpact.extraMonthly > 0 && (
+              <ResultCard
+                title="Prepayment Impact"
+                mainAmount={prepaymentImpact.interestSaved}
+                mainLabel="Estimated Interest Saved"
+                accentColor={COLORS.accent}
+                rows={[
+                  { label: 'Extra Payment / Month', value: prepaymentImpact.extraMonthly },
+                  { label: 'Revised Loan Closure', value: prepaymentImpact.revisedMonths, suffix: ' months' },
+                  { label: 'Months Saved', value: prepaymentImpact.monthsSaved, suffix: ' months', color: COLORS.accent },
+                  { label: 'Revised Total Interest', value: prepaymentImpact.revisedTotalInterest, color: COLORS.risk },
+                ]}
+                disclaimer="Prepayment estimate assumes the same interest rate through the full loan tenure."
+              />
+            )}
 
             {/* Yearly breakdown table toggle */}
             {yearlyBreakdown.length > 0 && (

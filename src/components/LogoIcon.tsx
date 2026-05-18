@@ -15,7 +15,7 @@ export const LogoIcon: React.FC<LogoIconProps> = ({ size = 40 }) => {
   return (
     <Image 
       source={require('../../assets/icon.png')} 
-      style={{ width: size, height: size, resizeMode: 'contain' }} 
+      style={{ width: size, height: size, resizeMode: 'cover' }} 
     />
   );
 };
@@ -49,7 +49,7 @@ export const LogoWithBg: React.FC<LogoWithBgProps> = ({
         },
       ]}
     >
-      <LogoIcon size={size * 0.68} />
+      <LogoIcon size={size * 1.14} />
     </View>
   );
 };
@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   logoBg: {
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   headerRow: {
     flexDirection: 'row',

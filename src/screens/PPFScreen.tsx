@@ -23,6 +23,7 @@ import { parseInput, formatINR, formatINRShort } from '../utils/format';
 import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 import { RateBanner } from '../components/RateBanner';
+import { GOVT_RATE_REVIEWED_ON, GOVT_RATE_SOURCE, GOVT_RATE_WARNING } from '../constants/compliance';
 
 export default function PPFScreen() {
   const [annual, setAnnual] = useState('150000');
@@ -115,8 +116,11 @@ export default function PPFScreen() {
         <RateBanner
           defaultRate={rate}
           onRateChange={handleInput(setRate, rateRef)}
-          details={`EEE Tax Free | Max ₹1.5L/yr\nMin Tenure: ${PPF_MIN_TENURE} Years | Govt Guaranteed`}
+          details={`EEE tax treatment under current rules | Max ₹1.5L/yr\nMin Tenure: ${PPF_MIN_TENURE} Years | Sovereign-backed account`}
           accentColor={COLORS.accent}
+          sourceLabel={GOVT_RATE_SOURCE}
+          reviewedOn={GOVT_RATE_REVIEWED_ON}
+          warningText={GOVT_RATE_WARNING}
         />
         <TouchableOpacity
           style={styles.resetRateBtn}
@@ -164,7 +168,7 @@ export default function PPFScreen() {
                 { label: 'Interest Earned (Tax-Free!) 🎉', value: result.totalInterest, highlight: true, color: COLORS.accent },
                 { label: '80C Tax Saved*', value: result.taxSaved, color: COLORS.warning },
               ]}
-              disclaimer="*Calculated on 30% slab. Actual tax saving depends on your tax slab. Not financial advice."
+              disclaimer="*Tax-saving estimate assumes a 30% slab. Reference rate only; verify the latest govt notification and current tax rules before investing. Not financial advice."
             />
 
             {/* EEE Badge */}

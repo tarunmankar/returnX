@@ -70,7 +70,7 @@ const CALCULATORS: CalcItem[] = [
     subtitle: '10% of SA every year for LIFE',
     icon: '🛡️',
     route: '/screens/lic',
-    tag: 'Guaranteed',
+    tag: 'Policy-based',
     tagColor: '#E91E63',
   },
   {
@@ -137,7 +137,7 @@ const CALCULATORS: CalcItem[] = [
     subtitle: 'Quarterly payout for 60+ age',
     icon: '👴',
     route: '/screens/scss',
-    tag: '8.2%',
+    tag: 'Rate revises',
     tagColor: COLORS.chart2,
   },
   {
@@ -147,7 +147,7 @@ const CALCULATORS: CalcItem[] = [
     subtitle: 'Monthly income, no risk',
     icon: '📮',
     route: '/screens/pomis',
-    tag: '7.4%',
+    tag: 'Rate revises',
     tagColor: COLORS.chart2,
   },
   // ── LOANS & EMI ──
@@ -227,8 +227,8 @@ const CATEGORIES = [
     headerColor: '#FFD600',
   },
   {
-    title: '🟢 No Risk · Govt Guaranteed',
-    subtitle: 'Safe Govt Schemes (PPF, SSY, etc.)',
+    title: '🟢 Govt-backed Savings',
+    subtitle: 'Govt schemes with sovereign backing',
     ids: ['ppf', 'ssy', 'nsc', 'scss', 'pomis'],
     headerColor: '#00C853',
   },
@@ -262,8 +262,8 @@ export default function HomeScreen() {
         {/* ── Hero Header ── */}
         <View style={[styles.header, { paddingTop: Math.max(insets.top + SPACING.md, SPACING.xxxl) }]}>
           <View style={styles.logoRow}>
-            <LogoWithBg size={52} bgColor={COLORS.primary} />
-            <View>
+            <LogoWithBg size={72} bgColor={COLORS.white} />
+            <View style={styles.brandCopy}>
               <Text style={styles.logoText}>ReturnX</Text>
               <Text style={styles.tagline}>Nivesh Calculator</Text>
             </View>
@@ -326,8 +326,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>ReturnX - Nivesh Calculator v1.0.0 • Made with ❤️ in India 🇮🇳</Text>
-        <Text style={styles.disclaimer}>Calculator only — not financial advice</Text>
+        <Text style={styles.disclaimer}>Calculator only — verify latest rate and tax rules before investing</Text>
       </ScrollView>
     </View>
   );
@@ -336,10 +335,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.primaryDark },
   scrollContent: { paddingBottom: SPACING.xxxl },
-  header: { paddingHorizontal: SPACING.base, paddingTop: SPACING.xxxl, paddingBottom: SPACING.lg, backgroundColor: COLORS.primary },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.md },
-  logoText: { fontSize: TYPOGRAPHY.fontSize.xxxl, fontWeight: TYPOGRAPHY.fontWeight.extrabold, color: COLORS.textPrimary, letterSpacing: -0.5 },
-  tagline: { fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.accent, fontWeight: TYPOGRAPHY.fontWeight.medium, letterSpacing: 0.3 },
+  header: { paddingHorizontal: SPACING.base, paddingTop: SPACING.xxxl, paddingBottom: SPACING.md, backgroundColor: COLORS.primary },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.lg },
+  brandCopy: { flexShrink: 1 },
+  logoText: { fontSize: TYPOGRAPHY.fontSize.xxxl, fontWeight: TYPOGRAPHY.fontWeight.extrabold, color: COLORS.textPrimary, letterSpacing: -0.6, lineHeight: 36 },
+  tagline: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.accentLight, fontWeight: TYPOGRAPHY.fontWeight.bold, letterSpacing: 0.35, marginTop: 0, lineHeight: 14 },
   sectionHeader: { marginHorizontal: SPACING.base, marginTop: SPACING.xl, marginBottom: SPACING.sm },
   sectionTitle: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: TYPOGRAPHY.fontWeight.bold, color: COLORS.textPrimary },
   sectionSubtitle: { fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.textMuted, marginTop: 2 },
@@ -357,6 +357,5 @@ const styles = StyleSheet.create({
   bottomNavItem: { flex: 1, alignItems: 'center', paddingVertical: SPACING.md, gap: 4 },
   bottomNavIcon: { fontSize: 18 },
   bottomNavText: { fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.textSecondary, fontWeight: TYPOGRAPHY.fontWeight.medium },
-  version: { textAlign: 'center', fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.textMuted, marginTop: SPACING.xl },
   disclaimer: { textAlign: 'center', fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.textMuted, marginTop: 4, fontStyle: 'italic' },
 });

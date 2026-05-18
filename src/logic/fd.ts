@@ -13,7 +13,15 @@ export interface FDResult {
   // Tax info
   tdsApplicable: boolean;
   tdsAmount: number;
+  tdsThreshold: number;
+  estimatedTax: number;
   postTaxInterest: number;
+  postTaxMaturity: number;
+}
+
+export interface FDTaxOptions {
+  taxRate?: number;
+  seniorCitizen?: boolean;
 }
 
 /**
@@ -24,9 +32,25 @@ export interface FDResult {
  * @param months - Tenure in months
  * @param quarterly - true for quarterly (default), false for monthly
  */
-export function calcFD(P: number, R: number, months: number, quarterly: boolean = true): FDResult {
+export function calcFD(P: number, R: number, months: number, quarterly: boolean = true, options: FDTaxOptions = {}): FDResult {
+  const taxRate = options.taxRate ?? 0;
+  const tdsThreshold = options.seniorCitizen ? 50000 : 40000;
+
   if (P <= 0 || months <= 0) {
-    return { maturityAmount: P, totalInterest: 0, principal: P, rate: R, months, quarterlyCompounding: quarterly, tdsApplicable: false, tdsAmount: 0, postTaxInterest: 0 };
+    return {
+      maturityAmount: P,
+      totalInterest: 0,
+      principal: P,
+      rate: R,
+      months,
+      quarterlyCompounding: quarterly,
+      tdsApplicable: false,
+      tdsAmount: 0,
+      tdsThreshold,
+      estimatedTax: 0,
+      postTaxInterest: 0,
+      postTaxMaturity: P,
+    };
   }
 
   const n = quarterly ? 4 : 12; // compounding frequency
@@ -42,10 +66,11 @@ export function calcFD(P: number, R: number, months: number, quarterly: boolean 
 
   const totalInterest = maturityAmount - P;
 
-  // TDS: 10% if interest > ₹40,000 (₹50,000 for senior citizens)
-  const tdsApplicable = totalInterest > 40000;
+  const tdsApplicable = totalInterest > tdsThreshold;
   const tdsAmount = tdsApplicable ? totalInterest * 0.1 : 0;
-  const postTaxInterest = totalInterest - tdsAmount;
+  const estimatedTax = totalInterest * (taxRate / 100);
+  const postTaxInterest = totalInterest - estimatedTax;
+  const postTaxMaturity = P + postTaxInterest;
 
   return {
     maturityAmount: Math.round(maturityAmount),
@@ -56,7 +81,10 @@ export function calcFD(P: number, R: number, months: number, quarterly: boolean 
     quarterlyCompounding: quarterly,
     tdsApplicable,
     tdsAmount: Math.round(tdsAmount),
+    tdsThreshold,
+    estimatedTax: Math.round(estimatedTax),
     postTaxInterest: Math.round(postTaxInterest),
+    postTaxMaturity: Math.round(postTaxMaturity),
   };
 }
 

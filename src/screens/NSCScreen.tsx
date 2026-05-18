@@ -13,6 +13,7 @@ import { useAppStore } from '../store/appStore';
 import { parseInput, formatINR, formatINRShort } from '../utils/format';
 import { shareToWhatsApp } from '../utils/share';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
+import { GOVT_RATE_REVIEWED_ON, GOVT_RATE_SOURCE, GOVT_RATE_WARNING } from '../constants/compliance';
 
 export default function NSCScreen() {
   const [principal, setPrincipal] = useState('100000');
@@ -80,6 +81,9 @@ export default function NSCScreen() {
           onRateChange={handleInput(setRate, rateRef)}
           details={"Lock-in: 5 Years | No Max Limit\nSection 80C Eligible"}
           accentColor={COLORS.accentLight}
+          sourceLabel={GOVT_RATE_SOURCE}
+          reviewedOn={GOVT_RATE_REVIEWED_ON}
+          warningText={GOVT_RATE_WARNING}
         />
         {errors.rate ? <Text style={styles.rateError}>{errors.rate}</Text> : null}
 
@@ -124,7 +128,7 @@ export default function NSCScreen() {
               rows={[
                 { label: 'Total Interest Earned', value: result.totalInterest, highlight: true, color: COLORS.accentLight },
               ]}
-              disclaimer="Eligible for deduction under Section 80C up to ₹1.5 Lakh."
+              disclaimer="80C eligibility depends on prevailing tax rules. Reference rate only; verify the latest govt notification before investing. Not financial advice."
             />
             <DonutChart
               title="Deposit vs Interest"
