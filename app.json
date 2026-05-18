@@ -24,12 +24,8 @@
         "backgroundColor": "#0A2540"
       },
       "package": "com.returnx.nivesh",
-      "edgeToEdgeEnabled": true,
       "permissions": [],
-      "versionCode": 1,
-      "compileSdkVersion": 34,
-      "targetSdkVersion": 34,
-      "minSdkVersion": 24
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -37,7 +33,17 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 24
+          }
+        }
+      ]
     ],
     "extra": {
       "router": {

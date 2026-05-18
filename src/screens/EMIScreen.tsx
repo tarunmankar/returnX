@@ -12,7 +12,6 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
 import { ResultActions } from '../components/ResultActions';
-import { RiskBadge } from '../components/RiskBadge';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcEMI, calcAmortizationYearly } from '../logic/loan';
 import { useAppStore } from '../store/appStore';
@@ -97,7 +96,6 @@ export default function EMIScreen() {
             label="Tenure (Years)"
             defaultValue={tenure}
             onChangeText={handleInput(setTenure, tenureRef)} prefix="" suffix="Months" placeholder="240" hint="240 months = 20 years" />
-          {R > 0 && <RiskBadge rate={R} showDescription />}
         </View>
 
         <TouchableOpacity style={styles.calcBtn} onPress={onPressCalculate} activeOpacity={0.8}>

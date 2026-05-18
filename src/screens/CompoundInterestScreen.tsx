@@ -9,7 +9,6 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
 import { ResultActions } from '../components/ResultActions';
-import { RiskBadge } from '../components/RiskBadge';
 import { FrequencySelector, Frequency, FREQUENCY_MAP } from '../components/FrequencySelector';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcCompoundInterest } from '../logic/interest';
@@ -101,7 +100,6 @@ export default function CompoundInterestScreen() {
             defaultValue={years}
             onChangeText={handleInput(setYears, yearsRef)} prefix="" suffix="Years" placeholder="10" />
           <FrequencySelector label="Compounding Frequency" value={frequency} onChange={(f) => { setFrequency(f); setTimeout(() => calculate(), 100); }} options={['Monthly', 'Quarterly', 'Yearly']} />
-          {R > 0 && <RiskBadge rate={R} showDescription />}
         </View>
 
         <TouchableOpacity style={styles.calcBtn} onPress={onPressCalculate} activeOpacity={0.8}>

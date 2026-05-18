@@ -8,7 +8,6 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
-import { RiskBadge } from '../components/RiskBadge';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcReducingBalance, calcReducingBalanceSummary } from '../logic/reduce';
 import { useAppStore } from '../store/appStore';
@@ -94,7 +93,6 @@ export default function ReducingBalanceScreen() {
             label="Duration (Months)"
             defaultValue={months}
             onChangeText={handleInput(setMonths, monthsRef)} prefix="" suffix="Months" placeholder="24" />
-          {R > 0 && <RiskBadge rate={R} showDescription />}
         </View>
 
         <TouchableOpacity style={styles.calcBtn} onPress={onPressCalculate} activeOpacity={0.8}>

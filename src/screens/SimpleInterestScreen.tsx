@@ -9,7 +9,6 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
 import { ResultActions } from '../components/ResultActions';
-import { RiskBadge } from '../components/RiskBadge';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcSimpleInterest } from '../logic/interest';
 import { useAppStore } from '../store/appStore';
@@ -97,7 +96,6 @@ export default function SimpleInterestScreen() {
             label="Tenure (Years)"
             defaultValue={years}
             onChangeText={handleInput(setYears, yearsRef)} prefix="" suffix="Years" placeholder="5" />
-          {R > 0 && <RiskBadge rate={R} showDescription />}
         </View>
 
         <TouchableOpacity style={styles.calcBtn} onPress={onPressCalculate} activeOpacity={0.8}>

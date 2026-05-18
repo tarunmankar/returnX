@@ -1,9 +1,9 @@
 /**
  * ReturnX - InputCard Component
- * Uses defaultValue (uncontrolled) so typing is always instant and smooth.
- * Parent controls the initial value; preset chips reset via key prop.
+ * Keeps local input responsive and syncs with parent updates
+ * (for preset chips / quick-fill interactions).
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
@@ -35,6 +35,11 @@ export const InputCard: React.FC<InputCardProps> = ({
   inputKey,
 }) => {
   const [focused, setFocused] = useState(false);
+  const [text, setText] = useState(defaultValue);
+
+  useEffect(() => {
+    setText(defaultValue);
+  }, [defaultValue, inputKey]);
 
   return (
     <View style={[styles.container, focused && styles.containerFocused]}>
@@ -43,8 +48,11 @@ export const InputCard: React.FC<InputCardProps> = ({
         {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
         <TextInput
           style={styles.input}
-          defaultValue={defaultValue}
-          onChangeText={onChangeText}
+          value={text}
+          onChangeText={(next) => {
+            setText(next);
+            onChangeText(next);
+          }}
           placeholder={placeholder}
           placeholderTextColor={COLORS.textMuted}
           keyboardType={keyboardType}

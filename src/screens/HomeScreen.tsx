@@ -308,6 +308,10 @@ export default function HomeScreen() {
 
         {/* ── Bottom Navigation Bar ── */}
         <View style={styles.bottomNav}>
+          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/screens/history')}>
+            <Text style={styles.bottomNavIcon}>🕐</Text>
+            <Text style={styles.bottomNavText}>History ({history.length})</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/screens/saved')}>
             <Text style={styles.bottomNavIcon}>💾</Text>
             <Text style={styles.bottomNavText}>Saved</Text>

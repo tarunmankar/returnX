@@ -11,11 +11,10 @@ import { router } from 'expo-router';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { InputCard } from '../components/InputCard';
 import { ResultCard } from '../components/ResultCard';
+import { ResultActions } from '../components/ResultActions';
 import { RiskBadge } from '../components/RiskBadge';
-import { FrequencySelector, Frequency, FREQUENCY_MAP } from '../components/FrequencySelector';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
 import { calcLumpSum } from '../logic/sip';
-import { calcCompoundYearWise } from '../logic/interest';
 import { useAppStore } from '../store/appStore';
 import { parseInput, isValidInput, formatINR, formatINRShort } from '../utils/format';
 import { shareToWhatsApp } from '../utils/share';
@@ -26,7 +25,7 @@ export default function LumpSumScreen() {
   const [rate, setRate] = useState('12');
   const [years, setYears] = useState('10');
   const [result, setResult] = useState<ReturnType<typeof calcLumpSum> | null>(null);
-  const { addHistory, incrementCalcCount, saveCalculation } = useAppStore();
+  const { incrementCalcCount, saveCalculation } = useAppStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const amountRef = useRef(amount);
@@ -69,7 +68,10 @@ export default function LumpSumScreen() {
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => calculate(), 300);
+    debounceRef.current = setTimeout(() => {
+      setter(text);
+      calculate();
+    }, 300);
   };
 
   const R = parseInput(rate);
@@ -112,9 +114,8 @@ export default function LumpSumScreen() {
                 { label: 'Wealth Multiplier', value: result.wealthRatio, isPercent: false, suffix: 'x', color: COLORS.accentLight },
               ]}
               disclaimer="Results are estimates. Not financial advice."
-              onSave={handleSave}
-              onShare={handleShare}
             />
+            <ResultActions onSave={handleSave} onShare={handleShare} />
           </View>
         )}
         <AdBannerPlaceholder size="banner" />

@@ -129,10 +129,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: Date.now().toString(),
       date: new Date().toISOString(),
     };
-    const updated = [newEntry, ...get().savedCalculations];
-    set({ savedCalculations: updated });
+    const updatedSaved = [newEntry, ...get().savedCalculations];
+    const updatedHistory = [newEntry, ...get().history].slice(0, 100);
+    set({ savedCalculations: updatedSaved, history: updatedHistory });
     try {
-      await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(updated));
+      await Promise.all([
+        AsyncStorage.setItem(SAVED_KEY, JSON.stringify(updatedSaved)),
+        AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory)),
+      ]);
     } catch (_) {}
   },
 

@@ -81,7 +81,10 @@ export default function SIPScreen() {
   const handleInput = (setter: (v: string) => void, ref: React.MutableRefObject<string>) => (text: string) => {
     ref.current = text;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => calculate(), 300);
+    debounceRef.current = setTimeout(() => {
+      setter(text);
+      calculate();
+    }, 300);
   };
 
   const R = parseInput(rate);
