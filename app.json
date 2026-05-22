@@ -2,18 +2,12 @@
   "expo": {
     "name": "ReturnX - Nivesh Calculator",
     "slug": "returnx-nivesh-calculator",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "scheme": "returnx",
     "description": "Smart Return Calculator for Every Investment. Calculate SIP, EMI, Compound Interest, and compare Loan vs Investment returns.",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A2540"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.returnx.nivesh"
@@ -25,7 +19,7 @@
       },
       "package": "com.returnx.nivesh",
       "permissions": [],
-      "versionCode": 1
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -33,6 +27,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0A2540"
+        }
+      ],
       [
         "expo-build-properties",
         {
