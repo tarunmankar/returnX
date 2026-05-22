@@ -48,14 +48,15 @@
       "router": {
         "origin": false
       },
-      "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID_HERE"
-      },
       "admob": {
         "androidAppId": "ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX",
         "iosAppId": "ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX",
         "enabled": false
+      },
+      "eas": {
+        "projectId": "a017679b-7999-475e-950a-764f6cb0f1ad"
       }
-    }
+    },
+    "owner": "tarunmankar04"
   }
 }
