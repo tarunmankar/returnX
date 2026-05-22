@@ -62,7 +62,7 @@ export default function PrivacyPolicyScreen() {
             {
               icon: '✉️',
               title: 'Contact Us',
-              body: 'If you have any questions about this privacy policy, please contact us at contact.returnx@gmail.com. As a small independent app, we are committed to your privacy.',
+              body: 'If you have any questions about this privacy policy, please contact us at mankar.tarun4@gmail.com. As a small independent app, we are committed to your privacy.',
             },
           ].map((item, idx) => (
             <View key={idx} style={styles.card}>
